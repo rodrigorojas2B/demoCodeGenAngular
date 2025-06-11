@@ -64,5 +64,23 @@ jobs:
           fi
           echo "🎨 Diseño encontrado: $diseno"
           cat "$diseno" > entrada_diseno.json
+
+      - name: Detectar y listar componentes Angular existentes
+        id: listar_componentes
+        run: |
+          cd repositorio-base
+
+          echo "📦 Buscando componentes Angular existentes..."
+
+          lista=$(find src/app -type f \( -name "*.component.ts" -o -name "*.component.html" -o -name "*.service.ts" \) | sort)
+
+          if [ -z "$lista" ]; then
+            echo "⚠️ No se encontraron componentes existentes."
+          else
+            echo "🧩 Componentes encontrados:"
+            echo "$lista"
+            echo "$lista" > componentes_existentes.txt
+          fi
+
       
         
