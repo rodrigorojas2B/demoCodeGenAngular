@@ -128,7 +128,14 @@ jobs:
           
           Si no hay componentes disponibles, indica que todos deben ser NUEVOS.
           No inventes nombres si no están justificados por la historia y la API.
+          ⚠️ Importante:
+          - El proyecto es Angular. El frontend no debe implementar lógica de negocio directamente.
+          - Todas las operaciones deben realizarse usando exclusivamente las APIs definidas en la colección Postman entregada.
+          - No debes suponer acceso directo a base de datos, ni replicar lógica en Angular que debería resolverse en el backend.
+          - Si una funcionalidad no está cubierta por la API, indícalo y sugiere agregar ese endpoint al backend.
+
           No generes código aún, solo análisis.
+
           EOF
       
         
