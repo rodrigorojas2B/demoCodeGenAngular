@@ -1,0 +1,68 @@
+name: Generar funcionalidad desde historia de usuario
+
+on:
+  push:
+    paths:
+      - 'historias-usuario/**/*.yml'
+      - 'postman/api_collection.json'
+      - 'diseno/**/*.json'
+
+jobs:
+  generar_codigo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio actual
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          path: repositorio-base
+
+      - name: Detectar historia de usuario modificada
+        id: historia
+        run: |
+          cd repositorio-base
+          git fetch --unshallow || true
+          base_sha="${{ github.event.before }}"
+          if ! git cat-file -e "$base_sha"^{commit} 2>/dev/null; then
+            echo "⚠️ SHA base no válido o sin historial, usando HEAD^"
+            base_sha="HEAD^"
+          fi
+          echo "🔍 Comparando con base: $base_sha"
+          archivo=$(git diff --name-only "$base_sha" HEAD | grep '^historias-usuario/.*\.yml$' | head -n 1 || true)
+          if [ -z "$archivo" ]; then
+            echo "⛔ No se encontró ninguna historia de usuario modificada. Abortando."
+            exit 1
+          fi
+          echo "ruta=$archivo" >> "$GITHUB_OUTPUT"
+          echo "base=$base_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Leer contenido de historia de usuario
+        run: |
+          cd repositorio-base
+          echo "📝 Historia detectada: ${{ steps.historia.outputs.ruta }}"
+          cat "${{ steps.historia.outputs.ruta }}" > entrada_gpt.txt
+
+      - name: Leer colección Postman
+        run: |
+          cd repositorio-base
+          if [ ! -f "postman/api_collection.json" ]; then
+            echo "⛔ Archivo postman/api_collection.json no encontrado. Abortando."
+            exit 1
+          fi
+          echo "📦 API Postman detectada"
+          cp postman/api_collection.json entrada_api.json
+
+      - name: Detectar y copiar diseño JSON
+        id: diseno
+        run: |
+          cd repositorio-base
+          base_sha="${{ steps.historia.outputs.base }}"
+          diseno=$(git diff --name-only "$base_sha" HEAD | grep '^diseno/.*\.json$' | head -n 1 || true)
+          if [ -z "$diseno" ]; then
+            echo "⛔ No se encontró archivo de diseño modificado. Abortando."
+            exit 1
+          fi
+          echo "🎨 Diseño detectado: $diseno"
+          cat "$diseno" > entrada_diseno.json
+        
