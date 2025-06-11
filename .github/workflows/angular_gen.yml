@@ -292,3 +292,8 @@ jobs:
           echo "$RESULTADO" > codigo_angular_generado.txt
 
           echo "✅ Código generado guardado en 'codigo_angular_generado.txt'"
+
+      - name: Mostrar código generado
+        run: |
+          echo "📦 Código Angular generado:"
+          cat repositorio-base/codigo_angular_generado.txt
