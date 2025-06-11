@@ -478,59 +478,84 @@ jobs:
           echo "📝 Contenido del resumen:"
           cat resumen_generacion.txt
 
-      - name: Ejecutar y corregir tests unitarios (máx 3 intentos)
+      - name: Ejecutar pruebas unitarias con corrección automática
         run: |
           echo "📁 Directorio actual antes de empezar:"
           pwd
-          ls -la
-          cd repositorio-base
+          ls -l
       
-          echo "📁 Contenido de repositorio-base:"
-          ls -la
-      
-          cd empleados || { echo "❌ No se encontró la carpeta empleados"; exit 1; }
-      
+          cd repositorio-base/${{ steps.detectar_app.outputs.appdir }}
           echo "📁 Dentro del proyecto Angular:"
           pwd
-          ls -la
+          ls -l
       
-          echo "🔧 Verificando si Angular CLI está disponible (usando npx)..."
+          echo "📦 Instalando dependencias..."
+          npm install
       
           max_attempts=3
           attempt=1
-          success=0
       
           while [ $attempt -le $max_attempts ]; do
-            echo "🧪 Ejecutando tests unitarios - Intento $attempt..."
+            echo "🧪 Ejecutando pruebas unitarias - Intento $attempt..."
             if npx ng test --watch=false --browsers=ChromeHeadless; then
-              echo "✅ Tests exitosos en el intento $attempt"
-              success=1
-              break
+              echo "✅ Tests pasaron en el intento $attempt"
+              exit 0
             else
               echo "❌ Tests fallidos en intento $attempt"
-              cd ..
               echo "📄 Capturando errores en test-error.log"
-              npx ng test --watch=false --browsers=ChromeHeadless > ../test-error.log 2>&1 || true
+              cat /home/runner/.npm/_logs/*.log > ../../test-error.log 2>/dev/null || echo "No se encontraron logs"
+      
+              if [ $attempt -eq $max_attempts ]; then
+                echo "❌ No fue posible corregir los tests en $max_attempts intentos"
+                exit 1
+              fi
       
               echo "🧠 Llamando a OpenAI para corrección..."
-              cat ../test-error.log > ../payload_test_error.txt
-              cat ../codigo_ts_generado.txt >> ../payload_test_error.txt
-              # Aquí puedes hacer el curl a OpenAI o tu API personalizada
+              if [ -f ../../codigo_ts_generado.txt ]; then
+                curl https://api.openai.com/v1/chat/completions \
+                  -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+                  -H "Content-Type: application/json" \
+                  -d @- <<EOPAYLOAD > ../../respuesta_ts.json
+              {
+                "model": "gpt-4",
+                "messages": [
+                  { "role": "system", "content": "Corrige el código TypeScript para que pasen los tests unitarios." },
+                  { "role": "user", "content": "Errores:\n$(cat ../../test-error.log)\n\nCódigo:\n$(cat ../../codigo_ts_generado.txt)" }
+                ],
+                "temperature": 0
+              }
+              EOPAYLOAD
+              else
+                echo "⚠️ No se encontró el archivo de entrada de código TypeScript"
+                exit 1
+              fi
       
-              # 🧩 Aplicar correcciones (simulado)
               echo "📦 Aplicando correcciones..."
-              # Aquí reescribes los archivos .ts corregidos si aplica
+              jq -r '.choices[0].message.content' ../../respuesta_ts.json > ../../codigo_ts_corregido.txt
       
-              attempt=$((attempt + 1))
-              cd empleados
+              echo "📄 Separando y escribiendo archivos corregidos..."
+              cd ../..
+              csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_corregido.txt "/^=== archivo: /" {*}
+      
+              for file in ts_tmp_*.txt; do
+                ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
+                if [ -z "$ruta" ]; then
+                  echo "⚠️ No se pudo determinar ruta para $file. Saltando."
+                  continue
+                fi
+      
+                destino="repositorio-base/${{ steps.detectar_app.outputs.appdir }}/$ruta"
+                mkdir -p "$(dirname "$destino")"
+                tail -n +2 "$file" > "$destino"
+                rm "$file"
+              done
+      
+              cd "repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
+              echo "🔁 Reintentando después de corrección..."
+              ((attempt++))
             fi
           done
-      
-          if [ $success -ne 1 ]; then
-            echo "❌ No fue posible corregir los tests en $max_attempts intentos."
-            exit 1
-          fi
-      
+              
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
