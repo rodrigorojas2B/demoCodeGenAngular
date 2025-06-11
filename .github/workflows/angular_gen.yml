@@ -108,36 +108,45 @@ jobs:
       
           echo -e "\n\n--- INSTRUCCIONES DE DIAGNÓSTICO ---" >> prompt_gpt.txt
           cat <<'EOF' >> prompt_gpt.txt
-      
+        
           Eres un experto en desarrollo Angular. A continuación se presentan:
           1. Una historia de usuario
-          2. Una especificación de API REST (formato Postman)
-          3. Un listado de componentes y servicios existentes
+          2. Una colección de API REST en formato Postman
+          3. Un listado de componentes y servicios existentes en el proyecto
           
           Tu tarea es:
-          - Analizar qué componentes pueden ser REUTILIZADOS AS-IS
-          - Cuáles deben ser MODIFICADOS, y por qué
-          - Qué NUEVOS componentes o servicios deben crearse
-          - Presentar tu análisis en una tabla Markdown con las columnas:
           
-          | Archivo | Tipo | Clasificación | Motivo |
-          |---------|------|----------------|--------|
-          | empleados.component.ts | componente | REUTILIZABLE-AS-IS | Ya implementa lista con filtros |
-          | empleado.service.ts | servicio | MODIFICABLE | Debe incorporar método POST /api/empleados |
-          | consulta-empleados.component.ts | componente | NUEVO | Página principal para listar empleados |
+          🔍 1. Para cada historia de usuario:
+            - Analiza y mapea qué endpoint(s) de la colección Postman pueden ser usados para cumplirla
+            - Si no existe un endpoint adecuado, indícalo claramente
           
-          Si no hay componentes disponibles, indica que todos deben ser NUEVOS.
-          No inventes nombres si no están justificados por la historia y la API.
+          🧱 2. Basado en eso:
+            - Clasifica los componentes existentes en:
+              - REUTILIZABLE-AS-IS
+              - MODIFICABLE
+              - NO APLICA
+            - Especifica qué componentes y servicios nuevos deben crearse, incluyendo nombre sugerido
+            - Para cada servicio, indica qué API endpoint debe consumir (URL, método, parámetros)
+          
+          📋 3. Presenta el resultado en 2 tablas Markdown:
+          
+          🔹 MAPA DE APIS POR HDU:
+          
+          | Historia | API Sugerida | Método | Endpoint | Observación |
+          |----------|--------------|--------|----------|-------------|
+          
+          🔹 DIAGNÓSTICO DE COMPONENTES:
+          
+          | Archivo | Tipo | Clasificación | Motivo | API a usar |
+          |---------|------|----------------|--------|-------------|
+          
           ⚠️ Importante:
-          - El proyecto es Angular. El frontend no debe implementar lógica de negocio directamente.
-          - Todas las operaciones deben realizarse usando exclusivamente las APIs definidas en la colección Postman entregada.
-          - No debes suponer acceso directo a base de datos, ni replicar lógica en Angular que debería resolverse en el backend.
-          - Si una funcionalidad no está cubierta por la API, indícalo y sugiere agregar ese endpoint al backend.
-
-          No generes código aún, solo análisis.
-
+          - El frontend Angular NO accede a bases de datos directamente
+          - Todo debe resolverse únicamente usando la colección Postman
+          - No generes código aún. Solo realiza el análisis completo.
+          - No inventes nombres de componentes o endpoints sin justificación clara
           EOF
-      
+        
         
       - name: Llamar a OpenAI para diagnóstico de componentes
         env:
