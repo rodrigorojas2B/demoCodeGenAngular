@@ -302,6 +302,37 @@ jobs:
       
           echo "✅ Código TypeScript generado guardado en 'codigo_ts_generado.txt'"
       
+      - name: Separar archivos TypeScript generados
+        run: |
+          cd repositorio-base
+      
+          echo "🧹 Limpiando residuos de formato GPT (TS)..."
+          sed -i '/^---/d' codigo_ts_generado.txt
+          sed -i '/^```.*$/d' codigo_ts_generado.txt
+          sed -i '/^# .*$/d' codigo_ts_generado.txt
+          sed -i '/^$/N;/^\n$/D' codigo_ts_generado.txt
+      
+          echo "📂 Separando archivos .ts individuales..."
+          csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_generado.txt "/^=== archivo: /" {*}
+      
+          for file in ts_tmp_*.txt; do
+            ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
+            if [ -z "$ruta" ]; then
+              echo "⚠️ No se pudo determinar ruta para $file. Saltando."
+              continue
+            fi
+      
+            destino="${{ steps.detectar_app.outputs.appdir }}/$ruta"
+            echo "📄 Escribiendo archivo: $destino"
+            mkdir -p "$(dirname "$destino")"
+            tail -n +2 "$file" > "$destino"
+            rm "$file"
+          done
+      
+          echo "✅ Archivos .ts generados:"
+          find "${{ steps.detectar_app.outputs.appdir }}/src/app" -type f -name "*.ts"
+      
+
       - name: Mostrar código TypeScript generado
         run: |
           echo "Código Angular (TS) generado:"
@@ -394,41 +425,36 @@ jobs:
           echo "✅ Archivos HTML y CSS generados correctamente."
       
 
-      - name: Limpiar y separar archivos Angular generados
+      - name: Separar archivos HTML y CSS generados
         run: |
           cd repositorio-base
-
-          echo "🧹 Limpiando residuos de formato GPT..."
+      
+          echo "🧹 Limpiando residuos de formato GPT (UI)..."
           sed -i '/^---/d' codigo_ui_generado.txt
           sed -i '/^```.*$/d' codigo_ui_generado.txt
           sed -i '/^# .*$/d' codigo_ui_generado.txt
           sed -i '/^$/N;/^\n$/D' codigo_ui_generado.txt
-
-          echo "📝 Contenido limpio antes de separar:"
-          cat codigo_ui_generado.txt
-
-          echo "📂 Separando en archivos individuales..."
-
-          mkdir -p "${{ steps.detectar_app.outputs.appdir }}/src/app/components"
-
-          csplit --quiet --prefix=tmp_ --suffix-format=%02d.txt codigo_ui_generado.txt "/^=== archivo: /" {*}
-
-          for file in tmp_*.txt; do
+      
+          echo "📂 Separando archivos .html y .css individuales..."
+          csplit --quiet --prefix=ui_tmp_ --suffix-format=%02d.txt codigo_ui_generado.txt "/^=== archivo: /" {*}
+      
+          for file in ui_tmp_*.txt; do
             ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
             if [ -z "$ruta" ]; then
               echo "⚠️ No se pudo determinar ruta para $file. Saltando."
               continue
             fi
-
-            echo "📄 Generando archivo: $ruta"
-            mkdir -p "$(dirname "$ruta")"
-            tail -n +2 "$file" > "$ruta"
+      
+            destino="${{ steps.detectar_app.outputs.appdir }}/$ruta"
+            echo "📄 Escribiendo archivo: $destino"
+            mkdir -p "$(dirname "$destino")"
+            tail -n +2 "$file" > "$destino"
             rm "$file"
           done
-
-          echo "✅ Archivos generados:"
-          find "${{ steps.detectar_app.outputs.appdir }}/src/app/components" -type f
-
+      
+          echo "✅ Archivos HTML y CSS generados:"
+          find "${{ steps.detectar_app.outputs.appdir }}/src/app/components" -type f \( -name "*.html" -o -name "*.css" \)
+      
       - name: Generar resumen de archivos creados
         run: |
           cd repositorio-base
