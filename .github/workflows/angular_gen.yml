@@ -139,6 +139,12 @@ jobs:
         run: |
           cd repositorio-base
       
+          # Asegura que el archivo de componentes exista (aunque esté vacío)
+          if [ ! -f componentes_existentes.txt ]; then
+            echo "⚠️ No existe 'componentes_existentes.txt'. Asumiendo que no hay componentes aún."
+            echo "(sin componentes disponibles)" > componentes_existentes.txt
+          fi
+      
           echo "📦 Diagnóstico de componentes basado en APIs ya mapeadas..."
       
           echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_componentes.txt
@@ -157,7 +163,7 @@ jobs:
           
           Para cada historia:
           - Basado en los endpoints identificados previamente, indica:
-            - Qué componentes y servicios existen que se pueden usar sin cambios (`REUTILIZABLE-AS-IS`)
+            - Qué componentes y servicios existentes se pueden usar sin cambios (`REUTILIZABLE-AS-IS`)
             - Cuáles deben modificarse (`MODIFICABLE`) y por qué
             - Qué componentes o servicios nuevos deben crearse (`NUEVO`)
           
@@ -167,6 +173,13 @@ jobs:
           
           | Archivo Angular | Tipo | Clasificación | API a usar | Método | Endpoint | Motivo |
           |------------------|------|----------------|------------|--------|----------|--------|
+          
+          🔐 Reglas:
+          - Solo debes usar APIs que hayan sido validadas en el análisis anterior.
+          - No inventes rutas ni métodos que no estén listados explícitamente.
+          - Si el listado de componentes está vacío o marcado como "(sin componentes disponibles)", asume que **todos los componentes deben crearse**.
+          
+          NO generes código todavía. Solo realiza el análisis técnico.
           EOF
       
           jq -Rs --arg SYSTEM_MSG "Eres un arquitecto frontend Angular. Usa solo la información provista, no asumas clases ni rutas que no estén explícitas." '{
