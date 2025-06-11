@@ -211,111 +211,159 @@ jobs:
           echo "📋 Diagnóstico generado por GPT:"
           cat diagnostico_componentes.txt
 
-      - name: Generar prompt para creación de código Angular
+      - name: Generar prompt para creación de código Angular (solo TS)
         run: |
           cd repositorio-base
-
-          echo "📌 Preparando prompt para generación de código Angular..."
-
-          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_codigo.txt
-          cat entrada_gpt.txt >> prompt_codigo.txt
-
-          echo -e "\n\n--- ANÁLISIS DE APIs DISPONIBLES ---" >> prompt_codigo.txt
-          cat analisis_apis.txt >> prompt_codigo.txt
-
-          echo -e "\n\n--- DIAGNÓSTICO DE COMPONENTES ---" >> prompt_codigo.txt
-          cat diagnostico_componentes.txt >> prompt_codigo.txt
-
-          echo -e "\n\n--- DISEÑO VISUAL / UI / ESTILOS ---" >> prompt_codigo.txt
-          cat entrada_diseno.json >> prompt_codigo.txt
-
-          echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_codigo.txt
-          cat <<'EOF' >> prompt_codigo.txt
-
+      
+          echo "📌 Preparando prompt para generación de código Angular (solo TS)..."
+      
+          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_ts.txt
+          cat entrada_gpt.txt >> prompt_ts.txt
+      
+          echo -e "\n\n--- ANÁLISIS DE APIs DISPONIBLES ---" >> prompt_ts.txt
+          cat analisis_apis.txt >> prompt_ts.txt
+      
+          echo -e "\n\n--- DIAGNÓSTICO DE COMPONENTES ---" >> prompt_ts.txt
+          cat diagnostico_componentes.txt >> prompt_ts.txt
+      
+          echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_ts.txt
+          cat <<'EOF' >> prompt_ts.txt
+          
           Eres un generador de código Angular experto.
-
-          Tu tarea es crear los siguientes artefactos de frontend Angular según los insumos entregados:
+          
+          Tu tarea es crear únicamente el código TypeScript (.ts) necesario para implementar las historias de usuario.
+          
+          Dispones de:
           - Las historias de usuario
           - El análisis de cobertura API
           - El diagnóstico de componentes existentes y nuevos
-          - El diseño visual (estructura, etiquetas, nombres, estilos)
-
+          
           Para cada componente indicado como "NUEVO" o "MODIFICABLE":
-          - Genera el archivo TypeScript (.ts)
-          - Genera el archivo de plantilla HTML (.html) usando los elementos, clases y estructuras sugeridas en el diseño
-          - Genera el archivo de estilos CSS o SCSS si aplica, alineado con el diseño
+          - Genera el archivo `.component.ts` o `.service.ts` correspondiente
+          - Usa la arquitectura Angular standalone (sin NgModules)
           - Asegúrate de que los servicios llamen al endpoint apropiado indicado en el análisis de API
           - No modifiques los componentes clasificados como "REUTILIZABLE-AS-IS"
-          - Respeta la arquitectura Angular standalone (sin módulos)
-          - Cada archivo debe ir envuelto entre delimitadores como:
-            === archivo: ruta/archivo.component.ts ===
-            ...contenido...
-            === archivo: ruta/archivo.component.html ===
-            ...contenido...
-
-          No incluyas explicaciones. Solo el código limpio de cada archivo. 
-
-          --- INSTRUCCIONES DE GENERACIÓN DE CÓDIGO ---
-
-          - Genera los archivos Angular necesarios para implementar las historias de usuario.
-          - Cada componente debe tener su archivo `.ts`, `.html` y `.css`.
-          - El archivo `.css` debe construirse según las pautas de diseño incluidas al inicio (diseño JSON).
-          - Usa clases CSS acordes al diseño: espaciado, colores, fuentes, bordes, etc.
-          - Si algún estilo no está definido, usa convenciones de Angular Material o estilos simples y consistentes.
-          - Usa nombres de clase coherentes y reutilizables para facilitar mantenimiento.
-
-          Ejemplo esperado:
-          === archivo: src/app/components/employee/employee.component.css ===
-          ```css
-          /* Estilos para EmployeeComponent */
-          .employee-list {
-            margin: 1rem;
-            font-family: 'Segoe UI', sans-serif;
-          }
-
+          
+          Entrega los archivos envueltos entre delimitadores como:
+          === archivo: ruta/archivo.component.ts ===
+          ...contenido TypeScript...
+          
+          No incluyas HTML, CSS ni explicaciones. Solo código TypeScript válido, limpio y funcional.
+          
           EOF
-
-      - name: Llamar a OpenAI para generar código Angular
+      
+      - name: Llamar a OpenAI para generar código TS
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cd repositorio-base
-
-          echo "📨 Enviando prompt a OpenAI para generación de código Angular..."
-
-          jq -Rs --arg SYSTEM_MSG "Eres un generador experto de aplicaciones Angular. Devuelve únicamente código válido, sin explicaciones." '{
+      
+          echo "📨 Enviando prompt a OpenAI para generación de código TypeScript..."
+      
+          jq -Rs --arg SYSTEM_MSG "Eres un generador experto de aplicaciones Angular. Devuelve únicamente código TypeScript válido, sin explicaciones." '{
             model: "gpt-4",
             messages: [
               { "role": "system", "content": $SYSTEM_MSG },
               { "role": "user", "content": . }
             ],
             temperature: 0.2
-          }' prompt_codigo.txt > payload_codigo.json
-
+          }' prompt_ts.txt > payload_ts.json
+      
           echo "📤 Payload construido, enviando a OpenAI..."
-
+      
           curl -s https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
-            -d @payload_codigo.json > respuesta_codigo.json
-
+            -d @payload_ts.json > respuesta_ts.json
+      
           echo "📥 Respuesta recibida."
-
-          RESULTADO=$(jq -r '.choices[0].message.content // empty' respuesta_codigo.json)
-
+      
+          RESULTADO=$(jq -r '.choices[0].message.content // empty' respuesta_ts.json)
+      
           if [ -z "$RESULTADO" ]; then
             echo "❌ No se recibió código válido desde OpenAI."
             exit 1
           fi
-
-          echo "$RESULTADO" > codigo_angular_generado.txt
-
-          echo "✅ Código generado guardado en 'codigo_angular_generado.txt'"
-
-      - name: Mostrar código generado
+      
+          echo "$RESULTADO" > codigo_ts_generado.txt
+      
+          echo "✅ Código TypeScript generado guardado en 'codigo_ts_generado.txt'"
+      
+      - name: Mostrar código TypeScript generado
         run: |
-          echo "📦 Código Angular generado:"
-          cat repositorio-base/codigo_angular_generado.txt
+          echo "📦 Código Angular (TS) generado:"
+          cat repositorio-base/codigo_ts_generado.txt
+    
+      - name: Generar prompt para HTML y CSS (según diseño)
+        run: |
+          cd repositorio-base
+      
+          echo "📌 Preparando prompt para generación de HTML y CSS..."
+      
+          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_ui.txt
+          cat entrada_gpt.txt >> prompt_ui.txt
+      
+          echo -e "\n\n--- DISEÑO VISUAL / UI / ESTILOS ---" >> prompt_ui.txt
+          cat entrada_diseno.json >> prompt_ui.txt
+      
+          echo -e "\n\n--- CÓDIGO TYPESCRIPT GENERADO ---" >> prompt_ui.txt
+          cat codigo_angular_generado.txt >> prompt_ui.txt
+      
+          echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_ui.txt
+          cat <<'EOF' >> prompt_ui.txt
+      
+          Eres un generador experto de interfaces Angular. Tu tarea es:
+          
+          - Leer la historia de usuario, el diseño visual JSON, y el archivo `.ts` generado previamente.
+          - Generar para cada componente Angular nuevo/modificado los archivos:
+            - `.component.html`
+            - `.component.css`
+          - Los archivos deben seguir el diseño provisto (colores, fuentes, layout, botones, estructura).
+          - Usa clases CSS reutilizables y coherentes con los tokens.
+          - Si un componente ya tiene estructura declarada en el `.ts`, úsala como base para el HTML.
+          - No incluyas código TypeScript.
+          - No des explicaciones ni comentarios fuera del código.
+          - Usa los siguientes delimitadores:
+            === archivo: src/app/components/nombre/nombre.component.html ===
+            ...html...
+            === archivo: src/app/components/nombre/nombre.component.css ===
+            ...css...
+          EOF
+      
+      - name: Llamar a OpenAI para generar HTML y CSS
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd repositorio-base
+      
+          echo "📨 Enviando prompt a OpenAI para generación de HTML y CSS..."
+      
+          jq -Rs --arg SYSTEM_MSG "Eres un generador experto de interfaces Angular. Devuelve únicamente código HTML y CSS limpio." '{
+            model: "gpt-4",
+            messages: [
+              { "role": "system", "content": $SYSTEM_MSG },
+              { "role": "user", "content": . }
+            ],
+            temperature: 0.2
+          }' prompt_ui.txt > payload_ui.json
+      
+          curl -s https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @payload_ui.json > respuesta_ui.json
+      
+          echo "📥 Respuesta recibida."
+      
+          UI_CODE=$(jq -r '.choices[0].message.content // empty' respuesta_ui.json)
+      
+          if [ -z "$UI_CODE" ]; then
+            echo "❌ No se recibió código HTML/CSS válido desde OpenAI."
+            exit 1
+          fi
+      
+          echo "$UI_CODE" > codigo_ui_generado.txt
+          echo "✅ Archivos HTML y CSS generados correctamente."
+      
 
       - name: Limpiar y separar archivos Angular generados
         run: |
@@ -332,7 +380,7 @@ jobs:
 
           echo "📂 Separando en archivos individuales..."
 
-          mkdir -p src/app/generated
+          mkdir -p src/app/component
 
           csplit --quiet --prefix=tmp_ --suffix-format=%02d.txt codigo_angular_generado.txt "/^=== archivo: /" {*}
 
@@ -350,7 +398,7 @@ jobs:
           done
 
           echo "✅ Archivos generados:"
-          find src/app/generated -type f
+          find src/app/component -type f
 
       - name: Generar resumen de archivos creados
         run: |
