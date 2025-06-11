@@ -57,12 +57,12 @@ jobs:
         id: diseno
         run: |
           cd repositorio-base
-          base_sha="${{ steps.historia.outputs.base }}"
-          diseno=$(git diff --name-only "$base_sha" HEAD | grep '^diseno/.*\.json$' | head -n 1 || true)
+          diseno=$(find diseno -name '*.json' | sort | head -n 1)
           if [ -z "$diseno" ]; then
-            echo "⛔ No se encontró archivo de diseño modificado. Abortando."
+            echo "⛔ No se encontró ningún archivo de diseño en la carpeta 'diseno'. Abortando."
             exit 1
           fi
-          echo "🎨 Diseño detectado: $diseno"
+          echo "🎨 Diseño encontrado: $diseno"
           cat "$diseno" > entrada_diseno.json
+      
         
