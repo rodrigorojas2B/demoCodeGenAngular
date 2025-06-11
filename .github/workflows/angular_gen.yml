@@ -491,34 +491,36 @@ jobs:
               success=true
               break
             else
-              echo "❌ Fallaron los tests. Obteniendo logs y solicitando corrección..."
+              echo "❌ Fallaron los tests. Preparando corrección..."
       
               mkdir -p tmp
-              cp src/**/*.spec.ts tmp/ 2>/dev/null || echo "No se encontraron archivos spec.ts"
-              cp src/**/*.ts tmp/ 2>/dev/null || echo "No se encontraron archivos ts"
+              cp src/**/*.spec.ts tmp/ 2>/dev/null || true
+              cp src/**/*.ts tmp/ 2>/dev/null || true
               cp src/**/*.html tmp/ 2>/dev/null || true
               cp src/**/*.css tmp/ 2>/dev/null || true
       
-              echo "📝 Generando prompt para corrección..."
-              cat <<'EOPROMPT' > tmp/prompt_error.txt
-              ### CONTEXTO
-              
-              Los siguientes archivos contienen código Angular y sus pruebas unitarias. Al ejecutar los tests, se ha producido un error. A continuación se entrega el mensaje completo del error y los archivos relevantes.
-              
-              Tu tarea es corregir exclusivamente los errores del test sin afectar otras funcionalidades.
-              
-              ### MENSAJE DE ERROR
-              EOPROMPT
+              # Guardar encabezado del prompt en un archivo
+              {
+                echo "### CONTEXTO"
+                echo
+                echo "Los siguientes archivos contienen código Angular y sus pruebas unitarias. Al ejecutar los tests, se ha producido un error. A continuación se entrega el mensaje completo del error y los archivos relevantes."
+                echo
+                echo "Tu tarea es corregir exclusivamente los errores del test sin afectar otras funcionalidades."
+                echo
+                echo "### MENSAJE DE ERROR"
+              } > tmp/prompt_error.txt
       
               npm run test -- --watch=false 2>&1 | tail -n 100 >> tmp/prompt_error.txt
       
-              echo -e "\n### CÓDIGO ACTUAL (ts + test + html + css)\n" >> tmp/prompt_error.txt
-              find tmp -type f -name "*.ts" -exec echo -e "\n===== {} =====\n" \; -exec cat {} \; >> tmp/prompt_error.txt
-              find tmp -type f -name "*.html" -exec echo -e "\n===== {} =====\n" \; -exec cat {} \; >> tmp/prompt_error.txt
-              find tmp -type f -name "*.css" -exec echo -e "\n===== {} =====\n" \; -exec cat {} \; -exec echo \; >> tmp/prompt_error.txt
+              echo -e "\n### CÓDIGO ACTUAL (ts + test + html + css)" >> tmp/prompt_error.txt
+              find tmp -type f \( -name "*.ts" -o -name "*.html" -o -name "*.css" \) | while read file; do
+                echo -e "\n===== $file =====" >> tmp/prompt_error.txt
+                cat "$file" >> tmp/prompt_error.txt
+              done
       
-              echo "🧠 Enviando prompt a OpenAI para corrección..."
               prompt_content=$(cat tmp/prompt_error.txt | jq -Rs .)
+      
+              echo "🧠 Llamando a OpenAI para corrección..."
               curl https://api.openai.com/v1/chat/completions \
                 -s \
                 -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
@@ -555,7 +557,7 @@ jobs:
             echo "❌ No fue posible corregir los tests en $max_attempts intentos."
             exit 1
           fi
-      
+            
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
