@@ -307,13 +307,13 @@ jobs:
           cat entrada_diseno.json >> prompt_ui.txt
       
           echo -e "\n\n--- CÓDIGO TYPESCRIPT GENERADO ---" >> prompt_ui.txt
-          cat codigo_angular_generado.txt >> prompt_ui.txt
+          cat codigo_ts_generado.txt >> prompt_ui.txt
       
           echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_ui.txt
           cat <<'EOF' >> prompt_ui.txt
       
           Eres un generador experto de interfaces Angular. Tu tarea es:
-          
+      
           - Leer la historia de usuario, el diseño visual JSON, y el archivo `.ts` generado previamente.
           - Generar para cada componente Angular nuevo/modificado los archivos:
             - `.component.html`
@@ -329,6 +329,7 @@ jobs:
             === archivo: src/app/components/nombre/nombre.component.css ===
             ...css...
           EOF
+        
       
       - name: Llamar a OpenAI para generar HTML y CSS
         env:
@@ -368,37 +369,38 @@ jobs:
       - name: Limpiar y separar archivos Angular generados
         run: |
           cd repositorio-base
-
+      
           echo "🧹 Limpiando residuos de formato GPT..."
-          sed -i '/^---/d' codigo_angular_generado.txt
-          sed -i '/^```.*$/d' codigo_angular_generado.txt
-          sed -i '/^# .*$/d' codigo_angular_generado.txt
-          sed -i '/^$/N;/^\n$/D' codigo_angular_generado.txt
-
+          sed -i '/^---/d' codigo_ui_generado.txt
+          sed -i '/^```.*$/d' codigo_ui_generado.txt
+          sed -i '/^# .*$/d' codigo_ui_generado.txt
+          sed -i '/^$/N;/^\n$/D' codigo_ui_generado.txt
+      
           echo "📝 Contenido limpio antes de separar:"
-          cat codigo_angular_generado.txt
-
+          cat codigo_ui_generado.txt
+      
           echo "📂 Separando en archivos individuales..."
-
-          mkdir -p src/app/component
-
-          csplit --quiet --prefix=tmp_ --suffix-format=%02d.txt codigo_angular_generado.txt "/^=== archivo: /" {*}
-
+      
+          mkdir -p src/app/components
+      
+          csplit --quiet --prefix=tmp_ --suffix-format=%02d.txt codigo_ui_generado.txt "/^=== archivo: /" {*}
+      
           for file in tmp_*.txt; do
             ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
             if [ -z "$ruta" ]; then
               echo "⚠️ No se pudo determinar ruta para $file. Saltando."
               continue
             fi
-
+      
             echo "📄 Generando archivo: $ruta"
             mkdir -p "$(dirname "$ruta")"
             tail -n +2 "$file" > "$ruta"
             rm "$file"
           done
-
+      
           echo "✅ Archivos generados:"
-          find src/app/component -type f
+          find src/app/components -type f
+      
 
       - name: Generar resumen de archivos creados
         run: |
