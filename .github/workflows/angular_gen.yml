@@ -512,9 +512,9 @@ jobs:
 
               echo "🧠 Llamando a OpenAI para corrección..."
 
-              if [ -f ../../codigo_ts_generado.txt ]; then
+              if [ -f ../codigo_ts_generado.txt ]; then
                 errores=$(jq -Rs . < ../../test-error.log)
-                codigo=$(jq -Rs . < ../../codigo_ts_generado.txt)
+                codigo=$(jq -Rs . < ../codigo_ts_generado.txt)
 
                 echo '{
                   "model": "gpt-4",
@@ -523,16 +523,17 @@ jobs:
                     { "role": "user", "content": "Errores:\n'"$errores"'\n\nCódigo:\n'"$codigo"'" }
                   ],
                   "temperature": 0
-                }' > ../../payload_ts.json
+                }' > ../payload_ts.json
 
                 curl https://api.openai.com/v1/chat/completions \
                   -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
                   -H "Content-Type: application/json" \
-                  -d @../../payload_ts.json > ../../respuesta_ts.json
+                  -d @../payload_ts.json > ../respuesta_ts.json
               else
                 echo "⚠️ No se encontró el archivo de entrada de código TypeScript"
                 exit 1
               fi
+
 
               echo "📦 Aplicando correcciones..."
               jq -r '.choices[0].message.content' ../../respuesta_ts.json > ../../codigo_ts_corregido.txt
