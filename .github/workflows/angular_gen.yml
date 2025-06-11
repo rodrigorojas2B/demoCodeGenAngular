@@ -2,10 +2,11 @@ name: Generar funcionalidad desde historia de usuario
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'historias-usuario/**/*.yml'
-      - 'postman/api_collection.json'
-      - 'diseno/**/*.json'
+
 
 jobs:
   generar_codigo:
@@ -19,6 +20,18 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT }}
           path: repositorio-base
+
+      - name: Detectar carpeta base del proyecto Angular
+        id: detectar_app
+        run: |
+          cd repositorio-base
+          APP_DIR=$(find . -type f -name 'angular.json' | head -n 1 | xargs dirname | sed 's|^./||')
+          if [ -z "$APP_DIR" ]; then
+            echo "⛔ No se pudo detectar carpeta del proyecto Angular. Abortando."
+            exit 1
+          fi
+          echo "📁 Proyecto Angular detectado: $APP_DIR"
+          echo "appdir=$APP_DIR" >> $GITHUB_OUTPUT
 
       - name: Detectar historia de usuario modificada
         id: historia
@@ -384,38 +397,37 @@ jobs:
       - name: Limpiar y separar archivos Angular generados
         run: |
           cd repositorio-base
-      
+
           echo "🧹 Limpiando residuos de formato GPT..."
           sed -i '/^---/d' codigo_ui_generado.txt
           sed -i '/^```.*$/d' codigo_ui_generado.txt
           sed -i '/^# .*$/d' codigo_ui_generado.txt
           sed -i '/^$/N;/^\n$/D' codigo_ui_generado.txt
-      
+
           echo "📝 Contenido limpio antes de separar:"
           cat codigo_ui_generado.txt
-      
+
           echo "📂 Separando en archivos individuales..."
-      
-          mkdir -p src/app/components
-      
+
+          mkdir -p "${{ steps.detectar_app.outputs.appdir }}/src/app/components"
+
           csplit --quiet --prefix=tmp_ --suffix-format=%02d.txt codigo_ui_generado.txt "/^=== archivo: /" {*}
-      
+
           for file in tmp_*.txt; do
             ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
             if [ -z "$ruta" ]; then
               echo "⚠️ No se pudo determinar ruta para $file. Saltando."
               continue
             fi
-      
+
             echo "📄 Generando archivo: $ruta"
             mkdir -p "$(dirname "$ruta")"
             tail -n +2 "$file" > "$ruta"
             rm "$file"
           done
-      
+
           echo "✅ Archivos generados:"
-          find src/app/components -type f
-      
+          find "${{ steps.detectar_app.outputs.appdir }}/src/app/components" -type f
 
       - name: Generar resumen de archivos creados
         run: |
@@ -425,15 +437,15 @@ jobs:
           {
             echo ""
             echo "=== COMPONENTES GENERADOS ==="
-            find src/app/components -type f \( -name "*.ts" -o -name "*.html" -o -name "*.css" \) | sort
+            find "${{ steps.detectar_app.outputs.appdir }}/src/app/components" -type f \( -name "*.ts" -o -name "*.html" -o -name "*.css" \) | sort
 
             echo ""
             echo "=== SERVICIOS GENERADOS ==="
-            find src/app/services -type f -name "*.ts" | sort
+            find "${{ steps.detectar_app.outputs.appdir }}/src/app/services" -type f -name "*.ts" | sort
 
             echo ""
             echo "=== MODELOS GENERADOS ==="
-            find src/app/models -type f -name "*.ts" | sort || true
+            find "${{ steps.detectar_app.outputs.appdir }}/src/app/models" -type f -name "*.ts" | sort || true
           } >> resumen_generacion.txt
 
           echo "📝 Contenido del resumen:"
