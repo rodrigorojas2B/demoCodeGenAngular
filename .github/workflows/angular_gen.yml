@@ -478,6 +478,13 @@ jobs:
           echo "📝 Contenido del resumen:"
           cat resumen_generacion.txt
 
+      - name: Ejecutar pruebas unitarias con Karma
+        run: |
+          cd repositorio-base/${{ steps.detectar_app.outputs.appdir }}
+          npm install
+          npx ng test --watch=false --browsers=ChromeHeadless
+      
+
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
