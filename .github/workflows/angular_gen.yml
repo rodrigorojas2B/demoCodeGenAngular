@@ -224,11 +224,11 @@ jobs:
           echo "📋 Diagnóstico generado por GPT:"
           cat diagnostico_componentes.txt
 
-      - name: Generar prompt para creación de código Angular (solo TS)
+      - name: Generar prompt para creación de código TypeScript (TS + pruebas unitarias)
         run: |
           cd repositorio-base
       
-          echo "📌 Preparando prompt para generación de código Angular (solo TS)..."
+          echo "Preparando prompt para generación de código TypeScript (con pruebas unitarias)..."
       
           echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_ts.txt
           cat entrada_gpt.txt >> prompt_ts.txt
@@ -241,29 +241,33 @@ jobs:
       
           echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_ts.txt
           cat <<'EOF' >> prompt_ts.txt
-          
+      
           Eres un generador de código Angular experto.
           
-          Tu tarea es crear únicamente el código TypeScript (.ts) necesario para implementar las historias de usuario.
+          Tu tarea es crear los siguientes archivos para cada componente o servicio Angular clasificado como "NUEVO" o "MODIFICABLE":
           
-          Dispones de:
-          - Las historias de usuario
-          - El análisis de cobertura API
-          - El diagnóstico de componentes existentes y nuevos
+          1. El archivo TypeScript principal (.ts), con lógica funcional según la historia de usuario y APIs disponibles.
+          2. El archivo de pruebas unitarias correspondiente (.spec.ts), incluyendo:
+              - Verificación de creación del componente o servicio.
+              - Pruebas de los métodos públicos.
+              - Uso de `TestBed`, `ComponentFixture` (para componentes), o `HttpTestingController` (para servicios).
+              - Simulación de dependencias necesarias usando spies o mocks.
+              - Casos de prueba para errores y condiciones límite, si son relevantes.
           
-          Para cada componente indicado como "NUEVO" o "MODIFICABLE":
-          - Genera el archivo `.component.ts` o `.service.ts` correspondiente
-          - Usa la arquitectura Angular standalone (sin NgModules)
-          - Asegúrate de que los servicios llamen al endpoint apropiado indicado en el análisis de API
-          - No modifiques los componentes clasificados como "REUTILIZABLE-AS-IS"
+          Formato esperado:
+            === archivo: src/app/components/employee/employee.component.ts ===
+            ...código TS...
+            === archivo: src/app/components/employee/employee.component.spec.ts ===
+            ...código de prueba...
           
-          Entrega los archivos envueltos entre delimitadores como:
-          === archivo: ruta/archivo.component.ts ===
-          ...contenido TypeScript...
-          
-          No incluyas HTML, CSS ni explicaciones. Solo código TypeScript válido, limpio y funcional.
+          Reglas:
+          - No generes código para componentes clasificados como "REUTILIZABLE-AS-IS".
+          - Respeta la arquitectura standalone de Angular (sin módulos).
+          - Usa Jasmine + Karma.
+          - Devuelve únicamente el código fuente, sin comentarios ni explicaciones.
           
           EOF
+      
       
       - name: Llamar a OpenAI para generar código TS
         env:
@@ -302,7 +306,7 @@ jobs:
       
           echo "✅ Código TypeScript generado guardado en 'codigo_ts_generado.txt'"
       
-      - name: Separar archivos TypeScript generados
+      - name: Separar archivos TypeScript (.ts + .spec.ts) generados
         run: |
           cd repositorio-base
       
@@ -317,22 +321,9 @@ jobs:
       
           for file in ts_tmp_*.txt; do
             ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
-      
             if [ -z "$ruta" ]; then
               echo "⚠️ No se pudo determinar ruta para $file. Saltando."
               continue
-            fi
-      
-            # Corregir rutas mal formadas (como 'empleados/*.ts') y forzar que estén dentro de src/app
-            if [[ "$ruta" != src/app/* ]]; then
-              # Detectar si es un service
-              if [[ "$ruta" =~ \.service\.ts$ ]]; then
-                ruta="src/app/services/$(basename "$ruta")"
-              else
-                nombre=$(basename "$ruta")
-                base="${nombre%%.*}" # extraer nombre base sin extensión
-                ruta="src/app/components/$base/$nombre"
-              fi
             fi
       
             destino="${{ steps.detectar_app.outputs.appdir }}/$ruta"
@@ -343,7 +334,7 @@ jobs:
           done
       
           echo "✅ Archivos TypeScript generados:"
-          find "${{ steps.detectar_app.outputs.appdir }}/src/app" -type f -name "*.ts"
+          find "${{ steps.detectar_app.outputs.appdir }}/src/app" -type f \( -name "*.ts" -o -name "*.spec.ts" \)
       
       - name: Mostrar código TypeScript generado
         run: |
@@ -398,9 +389,7 @@ jobs:
           No incluyas código TypeScript.
           No incluyas explicaciones ni comentarios fuera del código.
 
-          EOF
-
-        
+          EOF  
       
       - name: Llamar a OpenAI para generar HTML y CSS
         env:
