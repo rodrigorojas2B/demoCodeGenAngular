@@ -90,24 +90,24 @@ jobs:
           find src/app -type f \( -name "*.component.ts" -o -name "*.component.html" -o -name "*.service.ts" \) | sort > componentes_existentes.txt
       
           if [ ! -s componentes_existentes.txt ]; then
-            echo "❌ No se encontraron componentes o servicios. Abortando."
-            exit 1
+            echo "⚠️ No se encontraron componentes o servicios existentes. Se asumirá que todo debe ser creado desde cero."
+            echo "(sin componentes disponibles)" > componentes_existentes.txt
+          else
+            echo "🧩 Componentes detectados:"
+            cat componentes_existentes.txt
           fi
       
-          echo "🧩 Componentes detectados:"
-          cat componentes_existentes.txt
+          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_gpt.txt
+          cat entrada_gpt.txt >> prompt_gpt.txt
       
-          echo -e "\n\n--- HISTORIA DE USUARIO ---" > entrada_gpt.txt
-          cat entrada_gpt.txt >> entrada_gpt.txt
+          echo -e "\n\n--- ESPECIFICACIÓN API POSTMAN ---" >> prompt_gpt.txt
+          cat entrada_api.json >> prompt_gpt.txt
       
-          echo -e "\n\n--- ESPECIFICACIÓN API POSTMAN ---" >> entrada_gpt.txt
-          cat entrada_api.json >> entrada_gpt.txt
+          echo -e "\n\n--- COMPONENTES EXISTENTES ---" >> prompt_gpt.txt
+          cat componentes_existentes.txt >> prompt_gpt.txt
       
-          echo -e "\n\n--- COMPONENTES EXISTENTES ---" >> entrada_gpt.txt
-          cat componentes_existentes.txt >> entrada_gpt.txt
-      
-          echo -e "\n\n--- INSTRUCCIONES DE DIAGNÓSTICO ---" >> entrada_gpt.txt
-          cat <<'EOF' >> entrada_gpt.txt
+          echo -e "\n\n--- INSTRUCCIONES DE DIAGNÓSTICO ---" >> prompt_gpt.txt
+          cat <<'EOF' >> prompt_gpt.txt
       
           Eres un experto en desarrollo Angular. A continuación se presentan:
           1. Una historia de usuario
@@ -126,8 +126,11 @@ jobs:
           | empleado.service.ts | servicio | MODIFICABLE | Debe incorporar método POST /api/empleados |
           | consulta-empleados.component.ts | componente | NUEVO | Página principal para listar empleados |
           
-          Solo debes usar como referencia los archivos listados. No asumas la existencia de componentes no incluidos. No generes código aún, solo análisis.
+          Si no hay componentes disponibles, indica que todos deben ser NUEVOS.
+          No inventes nombres si no están justificados por la historia y la API.
+          No generes código aún, solo análisis.
           EOF
+      
         
       - name: Llamar a OpenAI para diagnóstico de componentes
         env:
