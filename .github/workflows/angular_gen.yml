@@ -329,9 +329,9 @@ jobs:
             rm "$file"
           done
       
-          echo "✅ Archivos .ts generados:"
-          find "${{ steps.detectar_app.outputs.appdir }}/src/app" -type f -name "*.ts"
-      
+          echo "✅ Archivos TypeScript generados:"
+          find "${{ steps.detectar_app.outputs.appdir }}/src/app/components" -type f -name "*.ts"
+            
 
       - name: Mostrar código TypeScript generado
         run: |
