@@ -253,7 +253,8 @@ jobs:
             === archivo: ruta/archivo.component.html ===
             ...contenido...
 
-          No incluyas explicaciones. Solo el código limpio de cada archivo. EOF
+          No incluyas explicaciones. Solo el código limpio de cada archivo. 
+          EOF
 
       - name: Llamar a OpenAI para generar código Angular
         env:
