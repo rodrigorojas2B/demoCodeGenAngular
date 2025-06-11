@@ -1,0 +1,52 @@
+{
+    "info": {
+      "name": "Colección Generada",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "deleteEmployee",
+        "request": {
+          "method": "DELETE",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:8080/api/employees/{id}",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8080",
+            "path": ["api","employees","{id}"]
+          }
+        }
+      }
+  ,
+      {
+        "name": "getEmployeesBornBefore2000",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:8080/api/employees/born-before-2000",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8080",
+            "path": ["api","employees","born-before-2000"]
+          }
+        }
+      }
+  ,
+      {
+        "name": "getEmployeesOrderByPosition",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "http://localhost:8080/api/employees/order-by-position",
+            "protocol": "http",
+            "host": ["localhost"],
+            "port": "8080",
+            "path": ["api","employees","order-by-position"]
+          }
+        }
+      }
+    ]
+  }

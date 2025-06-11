@@ -82,5 +82,82 @@ jobs:
             echo "$lista" > componentes_existentes.txt
           fi
 
+      - name: Indexar componentes Angular y construir prompt
+        run: |
+          cd repositorio-base
       
+          echo "📁 Buscando componentes Angular..."
+          find src/app -type f \( -name "*.component.ts" -o -name "*.component.html" -o -name "*.service.ts" \) | sort > componentes_existentes.txt
+      
+          if [ ! -s componentes_existentes.txt ]; then
+            echo "❌ No se encontraron componentes o servicios. Abortando."
+            exit 1
+          fi
+      
+          echo "🧩 Componentes detectados:"
+          cat componentes_existentes.txt
+      
+          echo -e "\n\n--- HISTORIA DE USUARIO ---" > entrada_gpt.txt
+          cat entrada_gpt.txt >> entrada_gpt.txt
+      
+          echo -e "\n\n--- ESPECIFICACIÓN API POSTMAN ---" >> entrada_gpt.txt
+          cat entrada_api.json >> entrada_gpt.txt
+      
+          echo -e "\n\n--- COMPONENTES EXISTENTES ---" >> entrada_gpt.txt
+          cat componentes_existentes.txt >> entrada_gpt.txt
+      
+          echo -e "\n\n--- INSTRUCCIONES DE DIAGNÓSTICO ---" >> entrada_gpt.txt
+          cat <<'EOF' >> entrada_gpt.txt
+      
+          Eres un experto en desarrollo Angular. A continuación se presentan:
+          1. Una historia de usuario
+          2. Una especificación de API REST (formato Postman)
+          3. Un listado de componentes y servicios existentes
+          
+          Tu tarea es:
+          - Analizar qué componentes pueden ser REUTILIZADOS AS-IS
+          - Cuáles deben ser MODIFICADOS, y por qué
+          - Qué NUEVOS componentes o servicios deben crearse
+          - Presentar tu análisis en una tabla Markdown con las columnas:
+          
+          | Archivo | Tipo | Clasificación | Motivo |
+          |---------|------|----------------|--------|
+          | empleados.component.ts | componente | REUTILIZABLE-AS-IS | Ya implementa lista con filtros |
+          | empleado.service.ts | servicio | MODIFICABLE | Debe incorporar método POST /api/empleados |
+          | consulta-empleados.component.ts | componente | NUEVO | Página principal para listar empleados |
+          
+          Solo debes usar como referencia los archivos listados. No asumas la existencia de componentes no incluidos. No generes código aún, solo análisis.
+          EOF
+        
+      - name: Llamar a OpenAI para diagnóstico de componentes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd repositorio-base
+      
+          jq -Rs --arg SYSTEM_MSG "Eres un analista Angular. Usa solo los archivos entregados. No inventes componentes no listados. No generes código aún." '{
+            model: "gpt-4",
+            messages: [
+              { "role": "system", "content": $SYSTEM_MSG },
+              { "role": "user", "content": . }
+            ],
+            temperature: 0.2
+          }' entrada_gpt.txt > payload_diagnostico.json
+      
+          curl -s https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @payload_diagnostico.json > respuesta_gpt_diagnostico.json
+      
+          jq -r '.choices[0].message.content // "❌ GPT no devolvió contenido válido."' respuesta_gpt_diagnostico.json > diagnostico_gpt.txt
+            
+      - name: Mostrar análisis GPT
+        run: |
+          echo "📋 Tabla de diagnóstico de componentes Angular:"
+          if [ -s repositorio-base/diagnostico_gpt.txt ]; then
+            cat repositorio-base/diagnostico_gpt.txt
+          else
+            echo "⚠️ El archivo de diagnóstico está vacío o no se generó."
+            ls -l repositorio-base/
+          fi
         
