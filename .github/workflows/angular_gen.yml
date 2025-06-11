@@ -10,6 +10,8 @@ on:
 jobs:
   generar_codigo:
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - name: Clonar repositorio actual
@@ -82,23 +84,32 @@ jobs:
             echo "$lista" > componentes_existentes.txt
           fi
 
+      - name: Verificar que OPENAI_API_KEY está disponible
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY no está definida. Revisa los secretos del repositorio."
+            exit 1
+          else
+            echo "✅ OPENAI_API_KEY presente con longitud: ${#OPENAI_API_KEY}"
+          fi
+
       - name: Analizar historias de usuario y determinar APIs utilizables
         run: |
           cd repositorio-base
-      
+
           echo "📌 Preparando análisis de APIs disponibles para las historias de usuario..."
-      
+
           echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_apis.txt
           cat entrada_gpt.txt >> prompt_apis.txt
-      
+
           echo -e "\n\n--- ESPECIFICACIÓN API POSTMAN ---" >> prompt_apis.txt
           cat entrada_api.json >> prompt_apis.txt
-      
+
           echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_apis.txt
           cat <<'EOF' >> prompt_apis.txt
-      
+
           Tu tarea es analizar cada historia de usuario y determinar si puede ser implementada usando alguno de los endpoints definidos en la colección Postman (API REST).
-          
+
           Para cada historia:
           - Indica si hay uno o más endpoints que la cubran.
           - Si sí, especifica:
@@ -107,16 +118,13 @@ jobs:
             - Parámetros requeridos
             - Observaciones (si necesita filtros, transformaciones, etc.)
           - Si no hay cobertura adecuada, indícalo claramente.
-          
+
           Entrega los resultados en tabla Markdown:
-          
+
           | Historia | Método | Endpoint | Parámetros | Cobertura | Observación |
           |----------|--------|----------|------------|-----------|-------------|
           EOF
-      
-          echo "📄 Contenido del prompt para APIs:"
-          cat prompt_apis.txt
-      
+
           jq -Rs --arg SYSTEM_MSG "Eres un analista funcional que trabaja con colecciones Postman y HDUs." '{
             model: "gpt-4",
             messages: [
@@ -125,68 +133,57 @@ jobs:
             ],
             temperature: 0.2
           }' prompt_apis.txt > payload_apis.json
-      
-          echo "📄 Payload para OpenAI:"
-          cat payload_apis.json
-      
+
           curl -s https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
             -d @payload_apis.json > respuesta_apis.json
-      
-          echo "📨 Respuesta cruda:"
-          cat respuesta_apis.json
-      
-          # Validación segura
+
           ANALISIS=$(jq -r '.choices[0].message.content // empty' respuesta_apis.json)
           if [ -z "$ANALISIS" ]; then
             echo "❌ No se recibió análisis válido de APIs."
             exit 1
           fi
           echo "$ANALISIS" > analisis_apis.txt
-      
+
       - name: Mostrar análisis de APIs
         run: |
           echo "📋 Tabla de análisis de cobertura de APIs:"
           cat repositorio-base/analisis_apis.txt
-      
+
       - name: Diagnóstico de componentes Angular (usando APIs mapeadas)
         run: |
           cd repositorio-base
-      
-          # Asegura archivo aunque esté vacío
+
           if [ ! -f componentes_existentes.txt ]; then
             echo "⚠️ No existe 'componentes_existentes.txt'. Asumiendo que no hay componentes aún."
             echo "(sin componentes disponibles)" > componentes_existentes.txt
           fi
-      
+
           echo "📦 Diagnóstico de componentes basado en APIs ya mapeadas..."
-      
+
           echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_componentes.txt
           cat entrada_gpt.txt >> prompt_componentes.txt
-      
+
           echo -e "\n\n--- ANÁLISIS DE APIs DISPONIBLES ---" >> prompt_componentes.txt
           cat analisis_apis.txt >> prompt_componentes.txt
-      
+
           echo -e "\n\n--- COMPONENTES EXISTENTES ---" >> prompt_componentes.txt
           cat componentes_existentes.txt >> prompt_componentes.txt
-      
+
           echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_componentes.txt
           cat <<'EOF' >> prompt_componentes.txt
-      
+
           Tu tarea es analizar qué componentes y servicios Angular deben usarse para implementar las historias de usuario, según el análisis previo de APIs.
-          
+
           Entrega una tabla Markdown:
-          
+
           | Archivo Angular | Tipo | Clasificación | API a usar | Método | Endpoint | Motivo |
           |------------------|------|----------------|------------|--------|----------|--------|
-          
+
           Si no hay componentes existentes, asume que deben crearse todos desde cero. NO generes código todavía.
           EOF
-      
-          echo "📄 Contenido del prompt para diagnóstico:"
-          cat prompt_componentes.txt
-      
+
           jq -Rs --arg SYSTEM_MSG "Eres un arquitecto frontend Angular. Usa solo la información provista." '{
             model: "gpt-4",
             messages: [
@@ -195,27 +192,21 @@ jobs:
             ],
             temperature: 0.2
           }' prompt_componentes.txt > payload_componentes.json
-      
-          echo "📄 Payload para OpenAI:"
-          cat payload_componentes.json
-      
+
           curl -s https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
             -d @payload_componentes.json > respuesta_componentes.json
-      
-          echo "📨 Respuesta cruda:"
-          cat respuesta_componentes.json
-      
+
           DIAGNOSTICO=$(jq -r '.choices[0].message.content // empty' respuesta_componentes.json)
           if [ -z "$DIAGNOSTICO" ]; then
             echo "❌ No se recibió diagnóstico válido de componentes."
             exit 1
           fi
           echo "$DIAGNOSTICO" > diagnostico_componentes.txt
-            
+
       - name: Mostrar diagnóstico de componentes
         run: |
+          cd repositorio-base
           echo "📋 Diagnóstico generado por GPT:"
-          cat repositorio-base/diagnostico_componentes.txt
-      
+          cat diagnostico_componentes.txt
