@@ -480,6 +480,8 @@ jobs:
 
       - name: Intentar corregir tests unitarios (máx 3 intentos)
         run: |
+          cd empleados
+      
           max_attempts=3
           attempts=0
           success=false
@@ -499,7 +501,6 @@ jobs:
               cp src/**/*.html tmp/ 2>/dev/null || true
               cp src/**/*.css tmp/ 2>/dev/null || true
       
-              # Guardar encabezado del prompt en un archivo
               {
                 echo "### CONTEXTO"
                 echo
@@ -557,7 +558,7 @@ jobs:
             echo "❌ No fue posible corregir los tests en $max_attempts intentos."
             exit 1
           fi
-            
+                  
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
