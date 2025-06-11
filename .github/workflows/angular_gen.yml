@@ -82,110 +82,111 @@ jobs:
             echo "$lista" > componentes_existentes.txt
           fi
 
-      - name: Indexar componentes Angular y construir prompt
+      - name: Analizar historias de usuario y determinar APIs utilizables
         run: |
           cd repositorio-base
       
-          echo "📁 Buscando componentes Angular..."
-          find src/app -type f \( -name "*.component.ts" -o -name "*.component.html" -o -name "*.service.ts" \) | sort > componentes_existentes.txt
+          echo "📌 Preparando análisis de APIs disponibles para las historias de usuario..."
       
-          if [ ! -s componentes_existentes.txt ]; then
-            echo "⚠️ No se encontraron componentes o servicios existentes. Se asumirá que todo debe ser creado desde cero."
-            echo "(sin componentes disponibles)" > componentes_existentes.txt
-          else
-            echo "🧩 Componentes detectados:"
-            cat componentes_existentes.txt
-          fi
+          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_apis.txt
+          cat entrada_gpt.txt >> prompt_apis.txt
       
-          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_gpt.txt
-          cat entrada_gpt.txt >> prompt_gpt.txt
+          echo -e "\n\n--- ESPECIFICACIÓN API POSTMAN ---" >> prompt_apis.txt
+          cat entrada_api.json >> prompt_apis.txt
       
-          echo -e "\n\n--- ESPECIFICACIÓN API POSTMAN ---" >> prompt_gpt.txt
-          cat entrada_api.json >> prompt_gpt.txt
+          echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_apis.txt
+          cat <<'EOF' >> prompt_apis.txt
       
-          echo -e "\n\n--- COMPONENTES EXISTENTES ---" >> prompt_gpt.txt
-          cat componentes_existentes.txt >> prompt_gpt.txt
-      
-          echo -e "\n\n--- INSTRUCCIONES DE DIAGNÓSTICO ---" >> prompt_gpt.txt
-          cat <<'EOF' >> prompt_gpt.txt
-      
-          Eres un experto en desarrollo Angular. Tienes acceso a:
-          1. Una o más historias de usuario
-          2. Una colección de APIs REST en formato Postman (frontend solo puede acceder a estos endpoints)
-          3. Un listado de componentes y servicios Angular existentes en el repositorio
+          Tu tarea es analizar cada historia de usuario y determinar si puede ser implementada usando alguno de los endpoints definidos en la colección Postman (API REST).
           
-          🧠 Tu tarea es realizar un análisis en **dos pasos claros**:
+          Para cada historia:
+          - Indica si hay uno o más endpoints que la cubran.
+          - Si sí, especifica:
+            - Método (GET, POST, etc.)
+            - Ruta
+            - Parámetros requeridos
+            - Observaciones (si necesita filtros, transformaciones, etc.)
+          - Si no hay cobertura adecuada, indícalo claramente.
           
-          ---
-          
-          📌 **PASO 1: Análisis de historia y mapeo de APIs**
-          
-          Para cada historia de usuario:
-          - Identifica si ya existe uno o más endpoints en la colección Postman que permiten cumplir la historia
-          - Para cada endpoint identificado, indica:
-            - Método (GET, POST, DELETE, etc.)
-            - Ruta (`/api/...`)
-            - Parámetros relevantes (query, body, path)
-          - Si no existe un endpoint adecuado, indícalo claramente (por ejemplo: "❌ No existe un endpoint para esta historia")
-          
-          📋 Presenta los resultados de este paso en una tabla:
+          Entrega los resultados en una tabla Markdown con el siguiente formato:
           
           | Historia | Método | Endpoint | Parámetros | Cobertura | Observación |
           |----------|--------|----------|------------|-----------|-------------|
-          
-          ---
-          
-          🧱 **PASO 2: Diagnóstico Angular**
-          
-          Usando el análisis anterior, determina:
-          - Qué componentes y servicios existentes se pueden usar tal como están (`REUTILIZABLE-AS-IS`)
-          - Cuáles deben modificarse (`MODIFICABLE`) y por qué
-          - Qué componentes nuevos deben crearse (`NUEVO`)
-          - Para cada servicio nuevo o modificado, indica qué API específica debe consumir y cómo (método, URL, parámetros)
-          
-          📋 Presenta los resultados de este paso en otra tabla:
-          
-          | Archivo Angular | Tipo | Clasificación | API a usar | Método | Endpoint | Motivo |
-          |------------------|------|----------------|------------|--------|----------|--------|
-          
-          ---
-          
-          🔐 Reglas importantes:
-          - Angular no accede directamente a bases de datos: **solo puede llamar APIs** disponibles en la colección Postman.
-          - No inventes rutas o métodos si no están explícitamente definidos en la colección.
-          - Si una historia no puede resolverse con las APIs disponibles, **indícalo con claridad**.
-          - No generes código aún. Este paso es solo de análisis.
           EOF
-                
-      - name: Llamar a OpenAI para diagnóstico de componentes
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          cd repositorio-base
       
-          jq -Rs --arg SYSTEM_MSG "Eres un analista Angular. Usa solo los archivos entregados. No inventes componentes no listados. No generes código aún." '{
+          jq -Rs --arg SYSTEM_MSG "Eres un analista funcional que trabaja con colecciones Postman y HDUs." '{
             model: "gpt-4",
             messages: [
               { "role": "system", "content": $SYSTEM_MSG },
               { "role": "user", "content": . }
             ],
             temperature: 0.2
-          }' entrada_gpt.txt > payload_diagnostico.json
+          }' prompt_apis.txt > payload_apis.json
       
           curl -s https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
-            -d @payload_diagnostico.json > respuesta_gpt_diagnostico.json
+            -d @payload_apis.json > respuesta_apis.json
       
-          jq -r '.choices[0].message.content // "❌ GPT no devolvió contenido válido."' respuesta_gpt_diagnostico.json > diagnostico_gpt.txt
-            
-      - name: Mostrar análisis GPT
+          jq -r '.choices[0].message.content // "❌ No se recibió análisis válido de APIs."' respuesta_apis.json > analisis_apis.txt
+      
+      - name: Mostrar análisis de APIs
         run: |
-          echo "📋 Tabla de diagnóstico de componentes Angular:"
-          if [ -s repositorio-base/diagnostico_gpt.txt ]; then
-            cat repositorio-base/diagnostico_gpt.txt
-          else
-            echo "⚠️ El archivo de diagnóstico está vacío o no se generó."
-            ls -l repositorio-base/
-          fi
-        
+          echo "📋 Tabla de análisis de cobertura de APIs:"
+          cat repositorio-base/analisis_apis.txt
+      
+      - name: Diagnóstico de componentes Angular (usando APIs mapeadas)
+        run: |
+          cd repositorio-base
+      
+          echo "📦 Diagnóstico de componentes basado en APIs ya mapeadas..."
+      
+          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_componentes.txt
+          cat entrada_gpt.txt >> prompt_componentes.txt
+      
+          echo -e "\n\n--- ANÁLISIS DE APIs DISPONIBLES ---" >> prompt_componentes.txt
+          cat analisis_apis.txt >> prompt_componentes.txt
+      
+          echo -e "\n\n--- COMPONENTES EXISTENTES ---" >> prompt_componentes.txt
+          cat componentes_existentes.txt >> prompt_componentes.txt
+      
+          echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_componentes.txt
+          cat <<'EOF' >> prompt_componentes.txt
+      
+          Tu tarea es analizar qué componentes y servicios Angular deben usarse para implementar las historias de usuario, según el análisis previo de APIs.
+          
+          Para cada historia:
+          - Basado en los endpoints identificados previamente, indica:
+            - Qué componentes y servicios existen que se pueden usar sin cambios (`REUTILIZABLE-AS-IS`)
+            - Cuáles deben modificarse (`MODIFICABLE`) y por qué
+            - Qué componentes o servicios nuevos deben crearse (`NUEVO`)
+          
+          Incluye en cada caso el endpoint exacto que se usará, el método y los parámetros si aplica.
+          
+          Presenta el resultado en tabla Markdown:
+          
+          | Archivo Angular | Tipo | Clasificación | API a usar | Método | Endpoint | Motivo |
+          |------------------|------|----------------|------------|--------|----------|--------|
+          EOF
+      
+          jq -Rs --arg SYSTEM_MSG "Eres un arquitecto frontend Angular. Usa solo la información provista, no asumas clases ni rutas que no estén explícitas." '{
+            model: "gpt-4",
+            messages: [
+              { "role": "system", "content": $SYSTEM_MSG },
+              { "role": "user", "content": . }
+            ],
+            temperature: 0.2
+          }' prompt_componentes.txt > payload_componentes.json
+      
+          curl -s https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @payload_componentes.json > respuesta_componentes.json
+      
+          jq -r '.choices[0].message.content // "❌ No se recibió diagnóstico válido."' respuesta_componentes.json > diagnostico_componentes.txt
+      
+      - name: Mostrar diagnóstico de componentes
+        run: |
+          echo "📋 Diagnóstico generado por GPT:"
+          cat repositorio-base/diagnostico_componentes.txt
+      
