@@ -108,46 +108,55 @@ jobs:
       
           echo -e "\n\n--- INSTRUCCIONES DE DIAGNÓSTICO ---" >> prompt_gpt.txt
           cat <<'EOF' >> prompt_gpt.txt
-        
-          Eres un experto en desarrollo Angular. A continuación se presentan:
-          1. Una historia de usuario
-          2. Una colección de API REST en formato Postman
-          3. Un listado de componentes y servicios existentes en el proyecto
+      
+          Eres un experto en desarrollo Angular. Tienes acceso a:
+          1. Una o más historias de usuario
+          2. Una colección de APIs REST en formato Postman (frontend solo puede acceder a estos endpoints)
+          3. Un listado de componentes y servicios Angular existentes en el repositorio
           
-          Tu tarea es:
+          🧠 Tu tarea es realizar un análisis en **dos pasos claros**:
           
-          🔍 1. Para cada historia de usuario:
-            - Analiza y mapea qué endpoint(s) de la colección Postman pueden ser usados para cumplirla
-            - Si no existe un endpoint adecuado, indícalo claramente
+          ---
           
-          🧱 2. Basado en eso:
-            - Clasifica los componentes existentes en:
-              - REUTILIZABLE-AS-IS
-              - MODIFICABLE
-              - NO APLICA
-            - Especifica qué componentes y servicios nuevos deben crearse, incluyendo nombre sugerido
-            - Para cada servicio, indica qué API endpoint debe consumir (URL, método, parámetros)
+          📌 **PASO 1: Análisis de historia y mapeo de APIs**
           
-          📋 3. Presenta el resultado en 2 tablas Markdown:
+          Para cada historia de usuario:
+          - Identifica si ya existe uno o más endpoints en la colección Postman que permiten cumplir la historia
+          - Para cada endpoint identificado, indica:
+            - Método (GET, POST, DELETE, etc.)
+            - Ruta (`/api/...`)
+            - Parámetros relevantes (query, body, path)
+          - Si no existe un endpoint adecuado, indícalo claramente (por ejemplo: "❌ No existe un endpoint para esta historia")
           
-          🔹 MAPA DE APIS POR HDU:
+          📋 Presenta los resultados de este paso en una tabla:
           
-          | Historia | API Sugerida | Método | Endpoint | Observación |
-          |----------|--------------|--------|----------|-------------|
+          | Historia | Método | Endpoint | Parámetros | Cobertura | Observación |
+          |----------|--------|----------|------------|-----------|-------------|
           
-          🔹 DIAGNÓSTICO DE COMPONENTES:
+          ---
           
-          | Archivo | Tipo | Clasificación | Motivo | API a usar |
-          |---------|------|----------------|--------|-------------|
+          🧱 **PASO 2: Diagnóstico Angular**
           
-          ⚠️ Importante:
-          - El frontend Angular NO accede a bases de datos directamente
-          - Todo debe resolverse únicamente usando la colección Postman
-          - No generes código aún. Solo realiza el análisis completo.
-          - No inventes nombres de componentes o endpoints sin justificación clara
+          Usando el análisis anterior, determina:
+          - Qué componentes y servicios existentes se pueden usar tal como están (`REUTILIZABLE-AS-IS`)
+          - Cuáles deben modificarse (`MODIFICABLE`) y por qué
+          - Qué componentes nuevos deben crearse (`NUEVO`)
+          - Para cada servicio nuevo o modificado, indica qué API específica debe consumir y cómo (método, URL, parámetros)
+          
+          📋 Presenta los resultados de este paso en otra tabla:
+          
+          | Archivo Angular | Tipo | Clasificación | API a usar | Método | Endpoint | Motivo |
+          |------------------|------|----------------|------------|--------|----------|--------|
+          
+          ---
+          
+          🔐 Reglas importantes:
+          - Angular no accede directamente a bases de datos: **solo puede llamar APIs** disponibles en la colección Postman.
+          - No inventes rutas o métodos si no están explícitamente definidos en la colección.
+          - Si una historia no puede resolverse con las APIs disponibles, **indícalo con claridad**.
+          - No generes código aún. Este paso es solo de análisis.
           EOF
-        
-        
+                
       - name: Llamar a OpenAI para diagnóstico de componentes
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
