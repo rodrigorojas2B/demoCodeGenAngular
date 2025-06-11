@@ -516,15 +516,15 @@ jobs:
                   -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
                   -H "Content-Type: application/json" \
                   -d @- <<EOPAYLOAD > ../../respuesta_ts.json
-              {
-                "model": "gpt-4",
-                "messages": [
-                  { "role": "system", "content": "Corrige el código TypeScript para que pasen los tests unitarios." },
-                  { "role": "user", "content": "Errores:\n$(cat ../../test-error.log)\n\nCódigo:\n$(cat ../../codigo_ts_generado.txt)" }
-                ],
-                "temperature": 0
-              }
-              EOPAYLOAD
+                {
+                  "model": "gpt-4",
+                  "messages": [
+                    { "role": "system", "content": "Corrige el código TypeScript para que pasen los tests unitarios." },
+                    { "role": "user", "content": "Errores:\n$(cat ../../test-error.log)\n\nCódigo:\n$(cat ../../codigo_ts_generado.txt)" }
+                  ],
+                  "temperature": 0
+                }
+                EOPAYLOAD
               else
                 echo "⚠️ No se encontró el archivo de entrada de código TypeScript"
                 exit 1
