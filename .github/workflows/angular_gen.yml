@@ -291,14 +291,14 @@ jobs:
       
       - name: Mostrar código TypeScript generado
         run: |
-          echo "📦 Código Angular (TS) generado:"
+          echo "Código Angular (TS) generado:"
           cat repositorio-base/codigo_ts_generado.txt
     
       - name: Generar prompt para HTML y CSS (según diseño)
         run: |
           cd repositorio-base
       
-          echo "📌 Preparando prompt para generación de HTML y CSS..."
+          echo "Preparando prompt para generación de HTML y CSS..."
       
           echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_ui.txt
           cat entrada_gpt.txt >> prompt_ui.txt
@@ -311,24 +311,39 @@ jobs:
       
           echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_ui.txt
           cat <<'EOF' >> prompt_ui.txt
-      
+
           Eres un generador experto de interfaces Angular. Tu tarea es:
-      
-          - Leer la historia de usuario, el diseño visual JSON, y el archivo `.ts` generado previamente.
-          - Generar para cada componente Angular nuevo/modificado los archivos:
+
+          1. Leer la historia de usuario, el diseño visual JSON y el archivo `.ts` generado previamente.
+          2. Generar para cada componente Angular nuevo/modificado los archivos:
             - `.component.html`
             - `.component.css`
-          - Los archivos deben seguir el diseño provisto (colores, fuentes, layout, botones, estructura).
-          - Usa clases CSS reutilizables y coherentes con los tokens.
-          - Si un componente ya tiene estructura declarada en el `.ts`, úsala como base para el HTML.
-          - No incluyas código TypeScript.
-          - No des explicaciones ni comentarios fuera del código.
-          - Usa los siguientes delimitadores:
-            === archivo: src/app/components/nombre/nombre.component.html ===
-            ...html...
-            === archivo: src/app/components/nombre/nombre.component.css ===
-            ...css...
+
+          🔧 Requisitos visuales y estructurales:
+
+          - Usa los **tokens visuales** provistos en el JSON:
+            - Tipografía: `font.family.primary`, `font.size.body`, `font.size.title`
+            - Colores: `color.primary`, `color.accent`, `color.text`, `color.neutral`, `color.header`
+            - Bordes: `border.radius.button`
+          - Aplica los colores correctos en botones (`color.primary`, `color.accent`) y textos (`color.text`).
+          - Usa contenedores de tipo **tarjeta** (`card`) para el contenido, como se especifica en el diseño.
+          - Si el layout contiene formularios o inputs (como "Buscar por nombre"), debes reflejarlos con campos `<input>`, `<form>`, `<label>` y botones con clases adecuadas.
+          - Si el layout tiene un `header` con `logo` y navegación, inclúyelo como `<header>` o `<nav>` en la estructura HTML.
+          - Las clases CSS deben ser coherentes, reutilizables y limpias. Prefiere nombres genéricos como `.form-field`, `.card`, `.title`, `.button-primary`.
+
+          Estructura de salida:
+
+          - Cada archivo generado debe ir envuelto entre delimitadores:
+            === archivo: src/app/components/[nombre]/[nombre].component.html ===
+            ...código HTML...
+            === archivo: src/app/components/[nombre]/[nombre].component.css ===
+            ...código CSS...
+
+          No incluyas código TypeScript.
+          No incluyas explicaciones ni comentarios fuera del código.
+
           EOF
+
         
       
       - name: Llamar a OpenAI para generar HTML y CSS
