@@ -483,11 +483,18 @@ jobs:
           echo "📁 Directorio actual antes de empezar:"
           pwd
           ls -la
-      
-          cd repositorio-base || { echo "❌ Error: No se encontró la carpeta repositorio-base"; exit 1; }
+          cd repositorio-base
       
           echo "📁 Contenido de repositorio-base:"
           ls -la
+      
+          cd empleados || { echo "❌ No se encontró la carpeta empleados"; exit 1; }
+      
+          echo "📁 Dentro del proyecto Angular:"
+          pwd
+          ls -la
+      
+          echo "🔧 Verificando si Angular CLI está disponible (usando npx)..."
       
           max_attempts=3
           attempt=1
@@ -495,66 +502,27 @@ jobs:
       
           while [ $attempt -le $max_attempts ]; do
             echo "🧪 Ejecutando tests unitarios - Intento $attempt..."
-      
-            cd "${{ steps.detectar_app.outputs.appdir }}" || { echo "❌ No se pudo acceder a la carpeta del proyecto Angular: ${{ steps.detectar_app.outputs.appdir }}"; exit 1; }
-      
-            echo "📁 Directorio actual dentro de proyecto Angular:"
-            pwd
-            ls -la
-      
-            echo "🔧 Verificando si 'ng' está disponible..."
-            if ! command -v ng &> /dev/null; then
-              echo "❌ Error: Angular CLI (ng) no está instalado o no está en el PATH"
-              exit 1
-            fi
-      
-            echo "🚀 Ejecutando: npm run test -- --watch=false --browsers=ChromeHeadless"
-            if npm run test -- --watch=false --browsers=ChromeHeadless; then
+            if npx ng test --watch=false --browsers=ChromeHeadless; then
               echo "✅ Tests exitosos en el intento $attempt"
               success=1
               break
             else
-              echo "❌ Fallaron los tests. Preparando corrección..."
-              cd ../..
-      
-              echo "📂 Mostrando archivos disponibles antes de la corrección:"
-              ls -la
-      
-              if [ ! -f test-error.log ]; then
-                echo "⚠️ Advertencia: No se encontró el archivo test-error.log"
-              fi
-              if [ ! -f codigo_ts_generado.txt ]; then
-                echo "⚠️ Advertencia: No se encontró el archivo codigo_ts_generado.txt"
-              fi
+              echo "❌ Tests fallidos en intento $attempt"
+              cd ..
+              echo "📄 Capturando errores en test-error.log"
+              npx ng test --watch=false --browsers=ChromeHeadless > ../test-error.log 2>&1 || true
       
               echo "🧠 Llamando a OpenAI para corrección..."
-              prompt="Corrige el siguiente error de test unitario en Angular:\n\n$(cat test-error.log 2>/dev/null)\n\nY aquí está el código actual:\n\n$(cat codigo_ts_generado.txt 2>/dev/null)"
-              echo "$prompt" > prompt_ts.txt
-              cat prompt_ts.txt
+              cat ../test-error.log > ../payload_test_error.txt
+              cat ../codigo_ts_generado.txt >> ../payload_test_error.txt
+              # Aquí puedes hacer el curl a OpenAI o tu API personalizada
       
-              # Aquí debería ir el llamado real a la API de OpenAI
-              # Por ahora se simula:
-              echo "=== archivo: src/app/services/employee.service.ts ===" > respuesta_ts.txt
-              echo "// código corregido simulado..." >> respuesta_ts.txt
-      
+              # 🧩 Aplicar correcciones (simulado)
               echo "📦 Aplicando correcciones..."
-              csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt respuesta_ts.txt "/^=== archivo: /" {*}
-      
-              for file in ts_tmp_*.txt; do
-                ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
-                if [ -z "$ruta" ]; then
-                  echo "⚠️ No se pudo determinar la ruta para $file. Saltando."
-                  continue
-                fi
-      
-                destino="${{ steps.detectar_app.outputs.appdir }}/$ruta"
-                echo "📄 Sobrescribiendo archivo: $destino"
-                mkdir -p "$(dirname "$destino")"
-                tail -n +2 "$file" > "$destino"
-                rm "$file"
-              done
+              # Aquí reescribes los archivos .ts corregidos si aplica
       
               attempt=$((attempt + 1))
+              cd empleados
             fi
           done
       
@@ -562,7 +530,7 @@ jobs:
             echo "❌ No fue posible corregir los tests en $max_attempts intentos."
             exit 1
           fi
-        
+      
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
