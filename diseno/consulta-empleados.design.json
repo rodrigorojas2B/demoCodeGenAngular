@@ -1,0 +1,70 @@
+{
+    "pantalla": "Consulta de Empleados",
+    "tokens": {
+      "color": {
+        "primary": { "value": "#009688", "type": "color" },          // Verde 2Brains
+        "accent": { "value": "#4CAF50", "type": "color" },           // Verde claro
+        "neutral": { "value": "#F5F5F5", "type": "color" },          // Gris fondo
+        "text": { "value": "#212121", "type": "color" },             // Texto principal
+        "buttonText": { "value": "#FFFFFF", "type": "color" },
+        "header": { "value": "#0277BD", "type": "color" }            // Azul oscuro
+      },
+      "font": {
+        "family": { "primary": { "value": "Roboto, sans-serif", "type": "fontFamily" } },
+        "size": { "body": { "value": "16px", "type": "dimension" }, "title": { "value": "24px", "type": "dimension" } }
+      },
+      "border": {
+        "radius": { "button": { "value": "8px", "type": "dimension" } }
+      },
+      "logo": {
+        "url": "https://2brains.cl/wp-content/uploads/2022/01/logo-2brains.svg",
+        "width": "120px",
+        "height": "auto"
+      }
+    },
+    "layout": {
+      "header": {
+        "type": "menu-bar",
+        "background": "color.header",
+        "elements": [
+          { "type": "logo", "source": "tokens.logo.url" },
+          { "type": "nav-item", "label": "Inicio", "route": "/" },
+          { "type": "nav-item", "label": "Empleados", "route": "/empleados" },
+          { "type": "nav-item", "label": "Cerrar sesión", "action": "logout()" }
+        ]
+      },
+      "content": [
+        {
+          "type": "card",
+          "title": "Listado de Empleados",
+          "body": [
+            {
+              "type": "form",
+              "fields": [
+                {
+                  "label": "Buscar por nombre",
+                  "control": "nombre",
+                  "inputType": "text",
+                  "placeholder": "Ej: Juan Pérez"
+                }
+              ],
+              "actions": [
+                {
+                  "type": "button",
+                  "label": "Buscar",
+                  "style": "primary",
+                  "action": "buscarEmpleados()"
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "dataSource": "empleados",
+              "columns": ["Nombre", "Cargo", "Email"]
+            }
+          ]
+        }
+      ]
+    }
+  }
+  
