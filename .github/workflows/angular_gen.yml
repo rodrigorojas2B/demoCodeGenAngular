@@ -478,86 +478,56 @@ jobs:
           echo "📝 Contenido del resumen:"
           cat resumen_generacion.txt
 
-      - name: Intentar corregir tests unitarios (máx 3 intentos)
+      - name: Ejecutar y corregir tests unitarios (máx 3 intentos)
         run: |
-          cd empleados
-      
+          cd repositorio-base
           max_attempts=3
-          attempts=0
-          success=false
+          attempt=1
+          success=0
       
-          while [ $attempts -lt $max_attempts ]; do
-            echo "🧪 Ejecutando tests unitarios - Intento $((attempts+1))..."
-            if npm run test -- --watch=false; then
-              echo "✅ Tests exitosos en el intento $((attempts+1))"
-              success=true
+          while [ $attempt -le $max_attempts ]; do
+            echo "🧪 Ejecutando tests unitarios - Intento $attempt..."
+      
+            cd "${{ steps.detectar_app.outputs.appdir }}" || { echo "❌ No se pudo acceder a la carpeta del proyecto Angular."; exit 1; }
+      
+            if npm run test -- --watch=false --browsers=ChromeHeadless; then
+              echo "✅ Tests exitosos en el intento $attempt"
+              success=1
               break
             else
               echo "❌ Fallaron los tests. Preparando corrección..."
-      
-              mkdir -p tmp
-              cp src/**/*.spec.ts tmp/ 2>/dev/null || true
-              cp src/**/*.ts tmp/ 2>/dev/null || true
-              cp src/**/*.html tmp/ 2>/dev/null || true
-              cp src/**/*.css tmp/ 2>/dev/null || true
-      
-              {
-                echo "### CONTEXTO"
-                echo
-                echo "Los siguientes archivos contienen código Angular y sus pruebas unitarias. Al ejecutar los tests, se ha producido un error. A continuación se entrega el mensaje completo del error y los archivos relevantes."
-                echo
-                echo "Tu tarea es corregir exclusivamente los errores del test sin afectar otras funcionalidades."
-                echo
-                echo "### MENSAJE DE ERROR"
-              } > tmp/prompt_error.txt
-      
-              npm run test -- --watch=false 2>&1 | tail -n 100 >> tmp/prompt_error.txt
-      
-              echo -e "\n### CÓDIGO ACTUAL (ts + test + html + css)" >> tmp/prompt_error.txt
-              find tmp -type f \( -name "*.ts" -o -name "*.html" -o -name "*.css" \) | while read file; do
-                echo -e "\n===== $file =====" >> tmp/prompt_error.txt
-                cat "$file" >> tmp/prompt_error.txt
-              done
-      
-              prompt_content=$(cat tmp/prompt_error.txt | jq -Rs .)
+              cd ../..
       
               echo "🧠 Llamando a OpenAI para corrección..."
-              curl https://api.openai.com/v1/chat/completions \
-                -s \
-                -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
-                -H "Content-Type: application/json" \
-                -d "$(jq -n --arg content "$prompt_content" '
-                  {
-                    model: "gpt-4",
-                    messages: [
-                      { role: "system", content: "Corrige código Angular que falla en tests unitarios." },
-                      { role: "user", content: $content }
-                    ],
-                    temperature: 0
-                  }')" | jq -r '.choices[0].message.content' > tmp/codigo_corregido.txt
+              prompt="Corrige el siguiente error de test unitario en Angular:\n\n$(cat test-error.log)\n\nY aquí está el código actual:\n\n$(cat codigo_ts_generado.txt)"
+              respuesta=$(echo "$prompt" | openai api chat.completions.create -m gpt-4o -g user -t code -f -)
+      
+              echo "$respuesta" > respuesta_ts.txt
       
               echo "📦 Aplicando correcciones..."
-              csplit --quiet --prefix=tmp/ts_tmp_ --suffix-format=%02d.txt tmp/codigo_corregido.txt "/^=== archivo: /" {*}
-              for f in tmp/ts_tmp_*.txt; do
-                ruta=$(grep '^=== archivo:' "$f" | sed -E 's/^=== archivo: //;s/ ===$//')
-                if [ -n "$ruta" ]; then
-                  destino="src/$ruta"
-                  mkdir -p "$(dirname "$destino")"
-                  tail -n +2 "$f" > "$destino"
-                  echo "✅ Corregido: $destino"
-                else
-                  echo "⚠️ No se pudo determinar la ruta para $f. Saltando."
+              csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt respuesta_ts.txt "/^=== archivo: /" {*}
+              for file in ts_tmp_*.txt; do
+                ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
+                if [ -z "$ruta" ]; then
+                  echo "⚠️ No se pudo determinar la ruta para $file. Saltando."
+                  continue
                 fi
-                rm "$f"
+      
+                destino="${{ steps.detectar_app.outputs.appdir }}/$ruta"
+                echo "📄 Sobrescribiendo archivo: $destino"
+                mkdir -p "$(dirname "$destino")"
+                tail -n +2 "$file" > "$destino"
+                rm "$file"
               done
+              attempt=$((attempt + 1))
             fi
-            attempts=$((attempts+1))
           done
       
-          if [ "$success" = false ]; then
+          if [ $success -ne 1 ]; then
             echo "❌ No fue posible corregir los tests en $max_attempts intentos."
             exit 1
           fi
+      
                   
       - name: Commit y push de los cambios generados
         env:
