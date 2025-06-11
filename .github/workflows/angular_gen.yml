@@ -317,9 +317,22 @@ jobs:
       
           for file in ts_tmp_*.txt; do
             ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
+      
             if [ -z "$ruta" ]; then
               echo "⚠️ No se pudo determinar ruta para $file. Saltando."
               continue
+            fi
+      
+            # Corregir rutas mal formadas (como 'empleados/*.ts') y forzar que estén dentro de src/app
+            if [[ "$ruta" != src/app/* ]]; then
+              # Detectar si es un service
+              if [[ "$ruta" =~ \.service\.ts$ ]]; then
+                ruta="src/app/services/$(basename "$ruta")"
+              else
+                nombre=$(basename "$ruta")
+                base="${nombre%%.*}" # extraer nombre base sin extensión
+                ruta="src/app/components/$base/$nombre"
+              fi
             fi
       
             destino="${{ steps.detectar_app.outputs.appdir }}/$ruta"
@@ -330,9 +343,8 @@ jobs:
           done
       
           echo "✅ Archivos TypeScript generados:"
-          find "${{ steps.detectar_app.outputs.appdir }}/src/app/components" -type f -name "*.ts"
-            
-
+          find "${{ steps.detectar_app.outputs.appdir }}/src/app" -type f -name "*.ts"
+      
       - name: Mostrar código TypeScript generado
         run: |
           echo "Código Angular (TS) generado:"
