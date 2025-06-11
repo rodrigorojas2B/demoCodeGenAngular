@@ -254,6 +254,25 @@ jobs:
             ...contenido...
 
           No incluyas explicaciones. Solo el código limpio de cada archivo. 
+
+          --- INSTRUCCIONES DE GENERACIÓN DE CÓDIGO ---
+
+          - Genera los archivos Angular necesarios para implementar las historias de usuario.
+          - Cada componente debe tener su archivo `.ts`, `.html` y `.css`.
+          - El archivo `.css` debe construirse según las pautas de diseño incluidas al inicio (diseño JSON).
+          - Usa clases CSS acordes al diseño: espaciado, colores, fuentes, bordes, etc.
+          - Si algún estilo no está definido, usa convenciones de Angular Material o estilos simples y consistentes.
+          - Usa nombres de clase coherentes y reutilizables para facilitar mantenimiento.
+
+          Ejemplo esperado:
+          === archivo: src/app/components/employee/employee.component.css ===
+          ```css
+          /* Estilos para EmployeeComponent */
+          .employee-list {
+            margin: 1rem;
+            font-family: 'Segoe UI', sans-serif;
+          }
+
           EOF
 
       - name: Llamar a OpenAI para generar código Angular
@@ -297,3 +316,83 @@ jobs:
         run: |
           echo "📦 Código Angular generado:"
           cat repositorio-base/codigo_angular_generado.txt
+
+      - name: Limpiar y separar archivos Angular generados
+        run: |
+          cd repositorio-base
+
+          echo "🧹 Limpiando residuos de formato GPT..."
+          sed -i '/^---/d' codigo_angular_generado.txt
+          sed -i '/^```.*$/d' codigo_angular_generado.txt
+          sed -i '/^# .*$/d' codigo_angular_generado.txt
+          sed -i '/^$/N;/^\n$/D' codigo_angular_generado.txt
+
+          echo "📝 Contenido limpio antes de separar:"
+          cat codigo_angular_generado.txt
+
+          echo "📂 Separando en archivos individuales..."
+
+          mkdir -p src/app/generated
+
+          csplit --quiet --prefix=tmp_ --suffix-format=%02d.txt codigo_angular_generado.txt "/^=== archivo: /" {*}
+
+          for file in tmp_*.txt; do
+            ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
+            if [ -z "$ruta" ]; then
+              echo "⚠️ No se pudo determinar ruta para $file. Saltando."
+              continue
+            fi
+
+            echo "📄 Generando archivo: $ruta"
+            mkdir -p "$(dirname "$ruta")"
+            tail -n +2 "$file" > "$ruta"
+            rm "$file"
+          done
+
+          echo "✅ Archivos generados:"
+          find src/app/generated -type f
+
+      - name: Generar resumen de archivos creados
+        run: |
+          cd repositorio-base
+
+          echo "📋 Resumen de archivos generados:" > resumen_generacion.txt
+          {
+            echo ""
+            echo "=== COMPONENTES GENERADOS ==="
+            find src/app/components -type f \( -name "*.ts" -o -name "*.html" -o -name "*.css" \) | sort
+
+            echo ""
+            echo "=== SERVICIOS GENERADOS ==="
+            find src/app/services -type f -name "*.ts" | sort
+
+            echo ""
+            echo "=== MODELOS GENERADOS ==="
+            find src/app/models -type f -name "*.ts" | sort || true
+          } >> resumen_generacion.txt
+
+          echo "📝 Contenido del resumen:"
+          cat resumen_generacion.txt
+
+      - name: Commit y push de los cambios generados
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          cd repositorio-base
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout main
+
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "⚠️ No hay cambios para commitear. Finalizando sin push."
+            exit 0
+          fi
+
+          mensaje="🤖 Código Angular generado automáticamente desde historia de usuario + resumen"
+          git commit -m "$mensaje"
+
+          echo "📤 Haciendo push a main..."
+          git push origin main
