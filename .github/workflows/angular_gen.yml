@@ -483,20 +483,20 @@ jobs:
           echo "📁 Directorio actual antes de empezar:"
           pwd
           ls -l
-      
+
           cd repositorio-base/${{ steps.detectar_app.outputs.appdir }}
           echo "📁 Dentro del proyecto Angular:"
           pwd
           ls -l
-      
+
           echo "📦 Instalando dependencias..."
           npm install
-      
+
           max_attempts=3
           attempt=1
-      
+
           while [ $attempt -le $max_attempts ]; do
-            echo "🧪 Ejecutando pruebas unitarias - Intento $attempt..."
+            echo "🧪 Ejecutando pruebas unitarios - Intento $attempt..."
             if npx ng test --watch=false --browsers=ChromeHeadless; then
               echo "✅ Tests pasaron en el intento $attempt"
               exit 0
@@ -504,58 +504,63 @@ jobs:
               echo "❌ Tests fallidos en intento $attempt"
               echo "📄 Capturando errores en test-error.log"
               cat /home/runner/.npm/_logs/*.log > ../../test-error.log 2>/dev/null || echo "No se encontraron logs"
-      
+
               if [ $attempt -eq $max_attempts ]; then
                 echo "❌ No fue posible corregir los tests en $max_attempts intentos"
                 exit 1
               fi
-      
+
               echo "🧠 Llamando a OpenAI para corrección..."
+
               if [ -f ../../codigo_ts_generado.txt ]; then
-                curl https://api.openai.com/v1/chat/completions \
-                  -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
-                  -H "Content-Type: application/json" \
-                  -d @- <<EOPAYLOAD > ../../respuesta_ts.json
-                {
+                errores=$(jq -Rs . < ../../test-error.log)
+                codigo=$(jq -Rs . < ../../codigo_ts_generado.txt)
+
+                echo '{
                   "model": "gpt-4",
                   "messages": [
                     { "role": "system", "content": "Corrige el código TypeScript para que pasen los tests unitarios." },
-                    { "role": "user", "content": "Errores:\n$(cat ../../test-error.log)\n\nCódigo:\n$(cat ../../codigo_ts_generado.txt)" }
+                    { "role": "user", "content": "Errores:\n'"$errores"'\n\nCódigo:\n'"$codigo"'" }
                   ],
                   "temperature": 0
-                }
-                EOPAYLOAD
+                }' > ../../payload_ts.json
+
+                curl https://api.openai.com/v1/chat/completions \
+                  -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+                  -H "Content-Type: application/json" \
+                  -d @../../payload_ts.json > ../../respuesta_ts.json
               else
                 echo "⚠️ No se encontró el archivo de entrada de código TypeScript"
                 exit 1
               fi
-      
+
               echo "📦 Aplicando correcciones..."
               jq -r '.choices[0].message.content' ../../respuesta_ts.json > ../../codigo_ts_corregido.txt
-      
+
               echo "📄 Separando y escribiendo archivos corregidos..."
               cd ../..
               csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_corregido.txt "/^=== archivo: /" {*}
-      
+
               for file in ts_tmp_*.txt; do
                 ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
                 if [ -z "$ruta" ]; then
                   echo "⚠️ No se pudo determinar ruta para $file. Saltando."
                   continue
                 fi
-      
+
                 destino="repositorio-base/${{ steps.detectar_app.outputs.appdir }}/$ruta"
                 mkdir -p "$(dirname "$destino")"
                 tail -n +2 "$file" > "$destino"
                 rm "$file"
               done
-      
+
               cd "repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
               echo "🔁 Reintentando después de corrección..."
               ((attempt++))
             fi
           done
-              
+
+            
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
