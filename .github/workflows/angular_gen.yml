@@ -227,9 +227,7 @@ jobs:
       - name: Generar prompt para creación de código TypeScript (TS + pruebas unitarias)
         run: |
           cd repositorio-base
-      
-          echo "📄 Preparando prompt para generación de código TypeScript (con pruebas unitarias)..." > prompt_ts.txt
-      
+
           echo -e "\n--- HISTORIA DE USUARIO ---" >> prompt_ts.txt
           cat entrada_gpt.txt >> prompt_ts.txt
       
