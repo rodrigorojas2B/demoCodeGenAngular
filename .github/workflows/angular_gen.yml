@@ -559,21 +559,19 @@ jobs:
       
               echo "🧠 Llamando a OpenAI para corrección..."
               if [ -f ../codigo_ts_generado.txt ]; then
-                errores=$(<../test-error.log)
-                codigo=$(<../codigo_ts_generado.txt)
-      
                 jq -n \
                   --arg system_msg "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\\n[código]" \
-                  --arg errores "$errores" \
-                  --arg codigo "$codigo" \
+                  --slurpfile errores ../test-error.log \
+                  --slurpfile codigo ../codigo_ts_generado.txt \
                   '{
                     model: "gpt-4",
                     messages: [
                       { "role": "system", "content": $system_msg },
-                      { "role": "user", "content": "Errores:\n\($errores)\n\nCódigo:\n\($codigo)" }
+                      { "role": "user", "content": "Errores:\n\($errores[0])\n\nCódigo:\n\($codigo[0])" }
                     ],
                     temperature: 0
                   }' > ../payload_ts.json
+
       
                 curl -s https://api.openai.com/v1/chat/completions \
                   -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
