@@ -315,6 +315,17 @@ jobs:
           - Devuelve solo el código fuente, sin comentarios ni explicaciones.
           EOF
 
+          echo -e "\n\n--- INSTRUCCIONES ADICIONALES ---" >> prompt_ts.txt
+          cat <<'EOF' >> prompt_ts.txt
+
+          Restricciones adicionales:
+
+          - Solo puedes importar clases, interfaces o modelos que estén explícitamente definidos en este diagnóstico.
+          - Si necesitas un modelo (por ejemplo, `Empleado`), primero verifica si está incluido en el diagnóstico. Si no lo está, debes definirlo tú mismo como parte del código generado.
+          - No asumas la existencia de archivos como `empleado.model.ts` si no está indicado explícitamente.
+
+          EOF
+
       - name: Llamar a OpenAI para generar código TS
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -561,16 +572,17 @@ jobs:
               if [ -f ../codigo_ts_generado.txt ]; then
                 jq -n \
                   --arg system_msg "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\\n[código]" \
-                  --slurpfile errores ../test-error.log \
-                  --slurpfile codigo ../codigo_ts_generado.txt \
+                  --rawfile errores ../test-error.log \
+                  --rawfile codigo ../codigo_ts_generado.txt \
                   '{
                     model: "gpt-4",
                     messages: [
                       { "role": "system", "content": $system_msg },
-                      { "role": "user", "content": "Errores:\n\($errores[0])\n\nCódigo:\n\($codigo[0])" }
+                      { "role": "user", "content": "Errores:\n\($errores)\n\nCódigo:\n\($codigo)" }
                     ],
                     temperature: 0
                   }' > ../payload_ts.json
+
 
       
                 curl -s https://api.openai.com/v1/chat/completions \
