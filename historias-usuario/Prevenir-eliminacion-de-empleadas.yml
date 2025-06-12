@@ -26,7 +26,7 @@ criterios_aceptacion:
   - La modificación debe estar delimitada por comentarios que indiquen claramente el inicio y fin del cambio realizado por la IA.
 
 id: HDU-EMP-003
-titulo: Empleados ordenados por  posición
+titulo: Empleados ordenados por posición
 actor: Administrador del sistema
 descripcion: 
   Como administrador del sistema
