@@ -252,10 +252,26 @@ jobs:
           cat <<'EOF' >> prompt_ts.txt
       
           Eres un generador de código Angular experto.
+
+          Para cada entrada listada en el diagnóstico, genera el archivo TypeScript correspondiente:
+
+          - Si es un servicio: crea el archivo `.ts` con los métodos necesarios para consumir el endpoint descrito, y su archivo `.spec.ts` con pruebas unitarias que cubran los escenarios y errores definidos.
+          - Si es un componente: crea el archivo `.ts` del componente que utilice el servicio correspondiente, y su archivo `.spec.ts` con pruebas unitarias básicas (creación y llamada a servicios).
+
+          **Formato obligatorio**:
+            === archivo: [ruta/archivo.ts] ===
+            [contenido TypeScript]
+            === archivo: [ruta/archivo.spec.ts] ===
+            [contenido de pruebas]
+
+          Importante:
+          - NO omitas ningún componente o servicio del diagnóstico.
+          - Utiliza el nombre de archivo exactamente como se indica.
+
           
           Tu tarea es crear los siguientes archivos para cada componente o servicio Angular clasificado como "NUEVO" o "MODIFICABLE":
           
-          1. El archivo TypeScript principal (.ts), con lógica funcional según la historia de usuario, diagnóstico técnico y APIs disponibles.
+          1. Los archivos TypeScript principales (.ts), con lógica funcional según la historia de usuario, diagnóstico técnico y APIs disponibles.
           2. El archivo de pruebas unitarias correspondiente (.spec.ts), incluyendo:
               - Verificación de creación del componente o servicio.
               - Pruebas de métodos públicos.
@@ -263,11 +279,35 @@ jobs:
               - Casos de error y condiciones límite.
           
           Formato esperado:
-          === archivo: src/app/services/employee.service.ts ===
-          ...código TS...
-          === archivo: src/app/services/employee.service.spec.ts ===
-          ...código pruebas...
-          
+          ├── src/                        # Carpeta principal de código fuente
+          │   ├── main.ts                 # Punto de entrada de la app
+          │   ├── index.html              # HTML raíz de la aplicación
+          │   ├── styles.css              # Estilos globales
+          │   ├── environments/           # Variables de entorno (dev, prod)
+          │   │   ├── environment.ts
+          │   │   └── environment.prod.ts
+          │   └── app/                    # Lógica de la aplicación
+          │       ├── app.config.ts       # Configuración inicial (en standalone)
+          │       ├── app.routes.ts       # Rutas principales (standalone)
+          │       ├── app.component.ts    # Componente raíz
+          │       ├── app.component.html
+          │       └── features/           # Funcionalidades organizadas por dominio
+          │           ├── empleados/      # Una funcionalidad específica
+          │           │   ├── components/ # Componentes de UI
+          │           │   │   └── lista-empleados.component.ts
+          │           │   │   └── lista-empleados.component.html 
+          │           │   │   └── lista-empleados.component.css 
+          │           │   │   └── lista-empleados.component.spec.ts 
+          │           │   ├── pages/      # Vistas completas
+          │           │   │   └── empleados.page.ts
+          │           │   ├── services/   # Servicios (API)
+          │           │   │   └── empleados.service.ts
+          │           │   ├── models/     # Interfaces y tipos
+          │           │   │   └── empleado.model.ts
+          │           │   └── tests/      # Pruebas unitarias
+          │           │       └── empleados.service.spec.ts
+          │           └── ...             # Otras funcionalidades
+      
           Reglas:
           - No generes código para componentes clasificados como "REUTILIZABLE-AS-IS".
           - Usa Angular standalone sin módulos.
