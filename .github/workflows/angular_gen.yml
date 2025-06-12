@@ -237,7 +237,7 @@ jobs:
           echo -e "\n--- COMPONENTES Y SERVICIOS A GENERAR (extraídos del diagnóstico) ---" >> prompt_ts.txt
           awk -F'|' '
             NR==1 { next }
-            /Servicio|Componente/ && /NUEVO|MODIFICABLE/ {
+            {
               tipo=tolower($2)
               archivo=$1
               clasificacion=$3
@@ -247,6 +247,7 @@ jobs:
               printf "\nComponente:\n- Archivo: %s\n- Tipo: %s\n- Clasificación: %s\n- Método: %s\n- Endpoint: %s\n- Motivo: %s\n", archivo, tipo, clasificacion, metodo, endpoint, motivo
             }
           ' diagnostico_componentes.txt >> prompt_ts.txt
+
       
           echo -e "\n--- INSTRUCCIONES ---" >> prompt_ts.txt
           cat <<'EOF' >> prompt_ts.txt
@@ -537,48 +538,36 @@ jobs:
               fi
       
               echo "🧠 Llamando a OpenAI para corrección..."
-              if [ -f ../codigo_ts_generado.txt ]; then
-                jq -n \
-                  --arg system_msg "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\\n[código]" \
-                  --rawfile errores ../test-error.log \
-                  --rawfile codigo ../codigo_ts_generado.txt \
-                  '{
-                    model: "gpt-4",
-                    messages: [
-                      { "role": "system", "content": $system_msg },
-                      { "role": "user", "content": "Errores:\n\($errores)\n\nCódigo:\n\($codigo)" }
-                    ],
-                    temperature: 0
-                  }' > ../payload_ts.json
-
-                echo "📄 Payload completo (payload_ts.json):"
-                cat payload_ts.json
-
-                echo "📏 Estimando tokens por longitud del contenido..."
-
-                WORDS=$(wc -w < prompt_ts.txt)
-                CHARS=$(wc -c < prompt_ts.txt)
-
-                # Estimación simple: 1 token ≈ 4 caracteres (código, inglés técnico)
-                TOKENS_ESTIMADOS=$((CHARS / 4))
-
-                echo "🔢 Palabras: $WORDS"
-                echo "🔢 Caracteres: $CHARS"
-                echo "🔢 Tokens estimados: ~ $TOKENS_ESTIMADOS (usando 1 token ≈ 4 caracteres)"
-
       
-                curl -s https://api.openai.com/v1/chat/completions \
-                  -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
-                  -H "Content-Type: application/json" \
-                  -d @../payload_ts.json > ../respuesta_ts.json
-      
-                echo "📋 Respuesta completa de OpenAI:"
-                cat ../respuesta_ts.json
-      
-              else
-                echo "⚠️ No se encontró el archivo de entrada de código TypeScript"
+              if [ ! -f ../codigo_ts_generado.txt ]; then
+                echo "⚠️ No se encontró código para corregir (../codigo_ts_generado.txt)"
                 exit 1
               fi
+      
+              jq -n \
+                --arg system_msg "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\\n[código]" \
+                --rawfile errores ../test-error.log \
+                --rawfile codigo ../codigo_ts_generado.txt \
+                '{
+                  model: "gpt-4",
+                  messages: [
+                    { "role": "system", "content": $system_msg },
+                    { "role": "user", "content": "Errores:\n\($errores)\n\nCódigo:\n\($codigo)" }
+                  ],
+                  temperature: 0
+                }' > ../payload_ts.json
+      
+              echo "📄 Payload generado correctamente:"
+              cat ../payload_ts.json
+      
+              echo "📨 Enviando solicitud a OpenAI..."
+              curl -s https://api.openai.com/v1/chat/completions \
+                -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+                -H "Content-Type: application/json" \
+                -d @../payload_ts.json > ../respuesta_ts.json
+      
+              echo "📋 Respuesta completa de OpenAI:"
+              cat ../respuesta_ts.json
       
               echo "📦 Aplicando correcciones..."
               jq -r '.choices[0].message.content // empty' ../respuesta_ts.json > ../codigo_ts_corregido.txt
@@ -610,8 +599,7 @@ jobs:
               ((attempt++))
             fi
           done
-      
-
+        
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
