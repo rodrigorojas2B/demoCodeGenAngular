@@ -311,6 +311,9 @@ jobs:
           }' prompt_ts.txt > payload_ts.json
 
           echo "📤 Payload construido, enviando a OpenAI..."
+          echo "📄 Payload completo (formateado):"
+          jq . payload_ts.json || cat payload_ts.json
+
 
           curl -s https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
@@ -549,9 +552,6 @@ jobs:
                     ],
                     temperature: 0
                   }' > ../payload_ts.json
-
-                echo "📄 Contenido del mensaje a OpenAI:"
-                cat prompt_ts.txt
 
                 echo "📄 Payload completo (payload_ts.json):"
                 cat payload_ts.json
