@@ -552,6 +552,23 @@ jobs:
                     temperature: 0
                   }' > ../payload_ts.json
 
+                echo "📄 Contenido del mensaje a OpenAI:"
+                cat prompt_ts.txt
+
+                echo "📄 Payload completo (payload_ts.json):"
+                cat payload_ts.json
+
+                echo "📏 Estimando tokens por longitud del contenido..."
+
+                WORDS=$(wc -w < prompt_ts.txt)
+                CHARS=$(wc -c < prompt_ts.txt)
+
+                # Estimación simple: 1 token ≈ 4 caracteres (código, inglés técnico)
+                TOKENS_ESTIMADOS=$((CHARS / 4))
+
+                echo "🔢 Palabras: $WORDS"
+                echo "🔢 Caracteres: $CHARS"
+                echo "🔢 Tokens estimados: ~ $TOKENS_ESTIMADOS (usando 1 token ≈ 4 caracteres)"
 
       
                 curl -s https://api.openai.com/v1/chat/completions \
