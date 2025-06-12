@@ -311,7 +311,12 @@ jobs:
 
           echo "📤 Payload construido, enviando a OpenAI..."
           echo "📄 Payload completo (formateado):"
-          jq . payload_ts.json || cat payload_ts.json
+          split -l 100 payload_ts.json payload_part_
+          for file in payload_part_*; do
+            echo "📄 Contenido de $file"
+            cat "$file"
+            echo "---------------------------------------------"
+          done
 
 
           curl -s https://api.openai.com/v1/chat/completions \
@@ -507,14 +512,8 @@ jobs:
 
       - name: Ejecutar pruebas unitarias con corrección automática
         run: |
-          echo "📁 Directorio actual antes de empezar:"
-          pwd
-          ls -l
-      
+          echo "📁 Entrando al proyecto Angular"
           cd repositorio-base/${{ steps.detectar_app.outputs.appdir }}
-          echo "📁 Dentro del proyecto Angular:"
-          pwd
-          ls -l
       
           echo "📦 Instalando dependencias..."
           npm install
@@ -524,30 +523,37 @@ jobs:
       
           while [ $attempt -le $max_attempts ]; do
             echo "🧪 Ejecutando pruebas unitarias - Intento $attempt..."
-            if npx ng test --watch=false --browsers=ChromeHeadless; then
+            if npx ng test --watch=false --browsers=ChromeHeadless | tee ../test-error.log; then
               echo "✅ Tests pasaron en el intento $attempt"
               exit 0
             else
               echo "❌ Tests fallidos en intento $attempt"
-              echo "📄 Capturando errores en test-error.log"
-              cat /home/runner/.npm/_logs/*.log > ../test-error.log 2>/dev/null || echo "No se encontraron logs"
       
               if [ $attempt -eq $max_attempts ]; then
                 echo "❌ No fue posible corregir los tests en $max_attempts intentos"
                 exit 1
               fi
       
-              echo "🧠 Llamando a OpenAI para corrección..."
+              echo "🧠 Preparando payload para corrección con OpenAI..."
       
-              if [ ! -f ../codigo_ts_generado.txt ]; then
-                echo "⚠️ No se encontró código para corregir (../codigo_ts_generado.txt)"
-                exit 1
+              cd ..
+              test_log_path="test-error.log"
+              code_path="codigo_ts_generado.txt"
+              payload_path="payload_ts.json"
+      
+              # Limitar logs a 20KB si son demasiado grandes
+              LOG_LIMIT=20000
+              if [ $(wc -c < "$test_log_path") -gt $LOG_LIMIT ]; then
+                echo "✂️ Log demasiado largo. Recortando a $LOG_LIMIT bytes..."
+                head -c $LOG_LIMIT "$test_log_path" > tmp_test_error.log
+                mv tmp_test_error.log "$test_log_path"
               fi
       
+              # Construir payload
               jq -n \
-                --arg system_msg "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\\n[código]" \
-                --rawfile errores ../test-error.log \
-                --rawfile codigo ../codigo_ts_generado.txt \
+                --arg system_msg "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\n[código]" \
+                --rawfile errores "$test_log_path" \
+                --rawfile codigo "$code_path" \
                 '{
                   model: "gpt-4",
                   messages: [
@@ -555,30 +561,33 @@ jobs:
                     { "role": "user", "content": "Errores:\n\($errores)\n\nCódigo:\n\($codigo)" }
                   ],
                   temperature: 0
-                }' > ../payload_ts.json
+                }' > "$payload_path"
       
-              echo "📄 Payload generado correctamente:"
-              cat ../payload_ts.json
+              echo "📏 Tamaño y tokens estimados:"
+              bytes=$(wc -c < "$payload_path")
+              tokens=$((bytes / 4))
+              echo "📦 Tamaño: $bytes bytes (~$tokens tokens)"
+      
+              if [ $tokens -gt 39000 ]; then
+                echo "⚠️ Payload supera el límite. Abortando para evitar error 400."
+                exit 1
+              fi
       
               echo "📨 Enviando solicitud a OpenAI..."
               curl -s https://api.openai.com/v1/chat/completions \
                 -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
                 -H "Content-Type: application/json" \
-                -d @../payload_ts.json > ../respuesta_ts.json
+                -d @"$payload_path" > respuesta_ts.json
       
-              echo "📋 Respuesta completa de OpenAI:"
-              cat ../respuesta_ts.json
+              echo "📥 Respuesta recibida. Aplicando correcciones..."
+              jq -r '.choices[0].message.content // empty' respuesta_ts.json > codigo_ts_corregido.txt
       
-              echo "📦 Aplicando correcciones..."
-              jq -r '.choices[0].message.content // empty' ../respuesta_ts.json > ../codigo_ts_corregido.txt
-      
-              if [ ! -s ../codigo_ts_corregido.txt ]; then
+              if [ ! -s codigo_ts_corregido.txt ]; then
                 echo "⚠️ La respuesta de OpenAI está vacía o malformada"
                 exit 1
               fi
       
-              echo "📄 Separando y escribiendo archivos corregidos..."
-              cd ..
+              echo "📄 Separando archivos generados..."
               csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_corregido.txt "/^=== archivo: /" {*}
       
               for file in ts_tmp_*.txt; do
@@ -599,7 +608,7 @@ jobs:
               ((attempt++))
             fi
           done
-        
+              
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
