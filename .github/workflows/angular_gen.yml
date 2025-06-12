@@ -299,7 +299,9 @@ jobs:
             -H "Content-Type: application/json" \
             -d @payload_ts.json > respuesta_ts.json
 
-          echo "📥 Respuesta recibida."
+          echo "📋 Respuesta completa de OpenAI:"
+          cat ../respuesta_ts.json
+
 
           RESULTADO=$(jq -r '.choices[0].message.content // empty' respuesta_ts.json)
 
