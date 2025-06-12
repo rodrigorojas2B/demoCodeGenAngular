@@ -228,72 +228,70 @@ jobs:
         run: |
           cd repositorio-base
       
-          echo "📄 Preparando prompt para generación de código TypeScript (con pruebas unitarias)..."
+          echo "📄 Preparando prompt para generación de código TypeScript (con pruebas unitarias)..." > prompt_ts.txt
       
-          echo -e "\n\n--- HISTORIA DE USUARIO ---" > prompt_ts.txt
+          echo -e "\n--- HISTORIA DE USUARIO ---" >> prompt_ts.txt
           cat entrada_gpt.txt >> prompt_ts.txt
       
-          echo -e "\n\n--- ANÁLISIS DE APIs DISPONIBLES ---" >> prompt_ts.txt
+          echo -e "\n--- ANÁLISIS DE APIs DISPONIBLES ---" >> prompt_ts.txt
           cat analisis_apis.txt >> prompt_ts.txt
       
-          echo -e "\n\n--- LISTADO DE ARCHIVOS A GENERAR (desde diagnóstico) ---" >> prompt_ts.txt
+          echo -e "\n--- COMPONENTES Y SERVICIOS A GENERAR (extraídos del diagnóstico) ---" >> prompt_ts.txt
           awk -F'|' '
-            BEGIN {
-              print "| Archivo Angular | Tipo | Clasificación | Método | Endpoint | Motivo |"
-              print "|------------------|------|----------------|--------|----------|--------|"
-            }
             NR==1 { next }
             /Servicio|Componente/ && /NUEVO|MODIFICABLE/ {
-              printf "| %s | %s | %s | %s | %s | %s |\n", $1, $2, $3, $5, $6, $7
+              tipo=tolower($2)
+              archivo=$1
+              clasificacion=$3
+              metodo=$5
+              endpoint=$6
+              motivo=$7
+              printf "\nComponente:\n- Archivo: %s\n- Tipo: %s\n- Clasificación: %s\n- Método: %s\n- Endpoint: %s\n- Motivo: %s\n", archivo, tipo, clasificacion, metodo, endpoint, motivo
             }
           ' diagnostico_componentes.txt >> prompt_ts.txt
       
-          echo -e "\n\n--- INSTRUCCIONES ---" >> prompt_ts.txt
+          echo -e "\n--- INSTRUCCIONES ---" >> prompt_ts.txt
           cat <<'EOF' >> prompt_ts.txt
       
           Eres un generador de código Angular experto.
           
-          Para cada entrada listada en la tabla anterior, debes generar **exactamente** los archivos indicados.
+          Para **cada entrada listada en la sección anterior**, debes generar exactamente los siguientes archivos:
           
-          Para cada servicio:
-          - Crea el archivo `.ts` con los métodos necesarios para consumir el endpoint descrito.
-          - Crea su archivo `.spec.ts` con pruebas unitarias que cubran escenarios exitosos y errores.
+          - El archivo `.ts` con la lógica del componente o servicio.
+          - El archivo `.spec.ts` con pruebas unitarias completas (verificación de creación, métodos, mocks y errores).
           
-          Para cada componente:
-          - Crea el archivo `.ts` del componente que utilice el servicio relacionado.
-          - Crea su archivo `.spec.ts` con pruebas básicas de creación y llamadas a métodos del servicio.
+          ⚠️ Importante:
+          - Usa el nombre de archivo exactamente como está listado.
+          - No omitas ninguna entrada.
+          - No generes archivos adicionales que no estén definidos arriba.
+          - Si necesitas importar una clase (como `Empleado`), y **no está explícitamente listada**, debes crearla tú mismo como parte de los archivos generados (`models/empleado.model.ts`).
+          - No asumas la existencia de archivos externos.
+          - Usa Angular standalone (sin módulos).
+          - Usa Jasmine + Karma.
+          - Devuelve solo bloques de código con el siguiente formato:
           
-          Formato obligatorio:
           === archivo: [ruta/archivo.ts] ===
-          [código TypeScript]
+          [código aquí]
           === archivo: [ruta/archivo.spec.ts] ===
-          [código de pruebas]
+          [código aquí]
           
-          Estructura del proyecto:
+          Estructura esperada del proyecto:
           src/
           └── app/
               └── features/
                   └── empleados/
                       ├── components/
-                      │   └── [componente].component.ts
-                      │   └── [componente].component.html
-                      │   └── [componente].component.css
-                      │   └── [componente].component.spec.ts
+                      │   └── [nombre].component.ts
+                      │   └── [nombre].component.html
+                      │   └── [nombre].component.css
+                      │   └── [nombre].component.spec.ts
                       ├── services/
-                      │   └── [servicio].service.ts
-                      │   └── [servicio].service.spec.ts
+                      │   └── [nombre].service.ts
+                      │   └── [nombre].service.spec.ts
                       ├── models/
-                      │   └── [modelo].model.ts (solo si explícitamente indicado)
-          
-          Reglas:
-          - No generes código para componentes clasificados como "REUTILIZABLE-AS-IS".
-          - No importes clases o archivos que no estén explícitamente indicados en el listado.
-          - Si necesitas una clase como `Empleado`, y no está listada, debes definirla tú mismo como parte del código generado.
-          - Usa Angular standalone sin módulos.
-          - Usa Jasmine + Karma.
-          - Devuelve solo el código fuente. No expliques, no justifiques.
-          
+                      │   └── [modelo].model.ts (solo si se requiere)
           EOF
+            
           
       - name: Llamar a OpenAI para generar código TS
         env:
