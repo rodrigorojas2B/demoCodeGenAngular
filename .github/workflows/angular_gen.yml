@@ -530,18 +530,18 @@ jobs:
           echo "📁 Directorio actual antes de empezar:"
           pwd
           ls -l
-
+      
           cd repositorio-base/${{ steps.detectar_app.outputs.appdir }}
           echo "📁 Dentro del proyecto Angular:"
           pwd
           ls -l
-
+      
           echo "📦 Instalando dependencias..."
           npm install
-
+      
           max_attempts=3
           attempt=1
-
+      
           while [ $attempt -le $max_attempts ]; do
             echo "🧪 Ejecutando pruebas unitarias - Intento $attempt..."
             if npx ng test --watch=false --browsers=ChromeHeadless; then
@@ -551,63 +551,75 @@ jobs:
               echo "❌ Tests fallidos en intento $attempt"
               echo "📄 Capturando errores en test-error.log"
               cat /home/runner/.npm/_logs/*.log > ../test-error.log 2>/dev/null || echo "No se encontraron logs"
-
+      
               if [ $attempt -eq $max_attempts ]; then
                 echo "❌ No fue posible corregir los tests en $max_attempts intentos"
                 exit 1
               fi
-
+      
               echo "🧠 Llamando a OpenAI para corrección..."
               if [ -f ../codigo_ts_generado.txt ]; then
-                errores=$(jq -Rs . < ../test-error.log)
-                codigo=$(jq -Rs . < ../codigo_ts_generado.txt)
-
-                echo '{
-                  "model": "gpt-4",
-                  "messages": [
-                    { "role": "system", "content": "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\\n[código]" },
-                    { "role": "user", "content": "Errores:\n'"$errores"'\n\nCódigo:\n'"$codigo"'" }
-                  ],
-                  "temperature": 0
-                }' > ../payload_ts.json
-
-                curl https://api.openai.com/v1/chat/completions \
+                errores=$(<../test-error.log)
+                codigo=$(<../codigo_ts_generado.txt)
+      
+                jq -n \
+                  --arg system_msg "Corrige el código TypeScript para que pasen los tests unitarios. Devuelve cada archivo como: === archivo: ruta/archivo.ts ===\\n[código]" \
+                  --arg errores "$errores" \
+                  --arg codigo "$codigo" \
+                  '{
+                    model: "gpt-4",
+                    messages: [
+                      { "role": "system", "content": $system_msg },
+                      { "role": "user", "content": "Errores:\n\($errores)\n\nCódigo:\n\($codigo)" }
+                    ],
+                    temperature: 0
+                  }' > ../payload_ts.json
+      
+                curl -s https://api.openai.com/v1/chat/completions \
                   -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
                   -H "Content-Type: application/json" \
                   -d @../payload_ts.json > ../respuesta_ts.json
-                  echo "📋 Respuesta completa de OpenAI:"
-                  cat ../respuesta_ts.json
+      
+                echo "📋 Respuesta completa de OpenAI:"
+                cat ../respuesta_ts.json
+      
               else
                 echo "⚠️ No se encontró el archivo de entrada de código TypeScript"
                 exit 1
               fi
-
+      
               echo "📦 Aplicando correcciones..."
-              jq -r '.choices[0].message.content' ../respuesta_ts.json > ../codigo_ts_corregido.txt
-
+              jq -r '.choices[0].message.content // empty' ../respuesta_ts.json > ../codigo_ts_corregido.txt
+      
+              if [ ! -s ../codigo_ts_corregido.txt ]; then
+                echo "⚠️ La respuesta de OpenAI está vacía o malformada"
+                exit 1
+              fi
+      
               echo "📄 Separando y escribiendo archivos corregidos..."
               cd ..
               csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_corregido.txt "/^=== archivo: /" {*}
-
+      
               for file in ts_tmp_*.txt; do
                 ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
                 if [ -z "$ruta" ]; then
                   echo "⚠️ No se pudo determinar ruta para $file. Saltando."
                   continue
                 fi
-
+      
                 destino="repositorio-base/${{ steps.detectar_app.outputs.appdir }}/$ruta"
                 mkdir -p "$(dirname "$destino")"
                 tail -n +2 "$file" > "$destino"
                 rm "$file"
               done
-
+      
               cd "repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
               echo "🔁 Reintentando después de corrección..."
               ((attempt++))
             fi
           done
-        
+      
+
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
