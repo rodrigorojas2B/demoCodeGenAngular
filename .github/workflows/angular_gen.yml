@@ -236,15 +236,15 @@ jobs:
           echo -e "\n\n--- ANÁLISIS DE APIs DISPONIBLES ---" >> prompt_ts.txt
           cat analisis_apis.txt >> prompt_ts.txt
       
-          echo -e "\n\n--- DIAGNÓSTICO DE COMPONENTES ---" >> prompt_ts.txt
+          echo -e "\n\n--- LISTADO DE ARCHIVOS A GENERAR (desde diagnóstico) ---" >> prompt_ts.txt
           awk -F'|' '
-            NR==1 { next } # Skip header
+            BEGIN {
+              print "| Archivo Angular | Tipo | Clasificación | Método | Endpoint | Motivo |"
+              print "|------------------|------|----------------|--------|----------|--------|"
+            }
+            NR==1 { next }
             /Servicio|Componente/ && /NUEVO|MODIFICABLE/ {
-              tipo=tolower($2)
-              nombre=tolower($1)
-              gsub(/ /, "-", nombre)
-              printf "\nComponente: %s\nTipo: %s\nClasificación: %s\nMétodo: %s\nEndpoint: %s\nMotivo: %s\n",
-                $1, tipo, $3, $5, $6, $7
+              printf "| %s | %s | %s | %s | %s | %s |\n", $1, $2, $3, $5, $6, $7
             }
           ' diagnostico_componentes.txt >> prompt_ts.txt
       
@@ -252,81 +252,51 @@ jobs:
           cat <<'EOF' >> prompt_ts.txt
       
           Eres un generador de código Angular experto.
-
-          Para cada entrada listada en el diagnóstico, genera el archivo TypeScript correspondiente:
-
-          - Si es un servicio: crea el archivo `.ts` con los métodos necesarios para consumir el endpoint descrito, y su archivo `.spec.ts` con pruebas unitarias que cubran los escenarios y errores definidos.
-          - Si es un componente: crea el archivo `.ts` del componente que utilice el servicio correspondiente, y su archivo `.spec.ts` con pruebas unitarias básicas (creación y llamada a servicios).
-
-          **Formato obligatorio**:
-            === archivo: [ruta/archivo.ts] ===
-            [contenido TypeScript]
-            === archivo: [ruta/archivo.spec.ts] ===
-            [contenido de pruebas]
-
-          Importante:
-          - NO omitas ningún componente o servicio del diagnóstico.
-          - Utiliza el nombre de archivo exactamente como se indica.
-
           
-          Tu tarea es crear los siguientes archivos para cada componente o servicio Angular clasificado como "NUEVO" o "MODIFICABLE":
+          Para cada entrada listada en la tabla anterior, debes generar **exactamente** los archivos indicados.
           
-          1. Los archivos TypeScript principales (.ts), con lógica funcional según la historia de usuario, diagnóstico técnico y APIs disponibles.
-          2. El archivo de pruebas unitarias correspondiente (.spec.ts), incluyendo:
-              - Verificación de creación del componente o servicio.
-              - Pruebas de métodos públicos.
-              - Uso de TestBed y mocks apropiados.
-              - Casos de error y condiciones límite.
+          Para cada servicio:
+          - Crea el archivo `.ts` con los métodos necesarios para consumir el endpoint descrito.
+          - Crea su archivo `.spec.ts` con pruebas unitarias que cubran escenarios exitosos y errores.
           
-          Formato esperado:
-          ├── src/                        # Carpeta principal de código fuente
-          │   ├── main.ts                 # Punto de entrada de la app
-          │   ├── index.html              # HTML raíz de la aplicación
-          │   ├── styles.css              # Estilos globales
-          │   ├── environments/           # Variables de entorno (dev, prod)
-          │   │   ├── environment.ts
-          │   │   └── environment.prod.ts
-          │   └── app/                    # Lógica de la aplicación
-          │       ├── app.config.ts       # Configuración inicial (en standalone)
-          │       ├── app.routes.ts       # Rutas principales (standalone)
-          │       ├── app.component.ts    # Componente raíz
-          │       ├── app.component.html
-          │       └── features/           # Funcionalidades organizadas por dominio
-          │           ├── empleados/      # Una funcionalidad específica
-          │           │   ├── components/ # Componentes de UI
-          │           │   │   └── lista-empleados.component.ts
-          │           │   │   └── lista-empleados.component.html 
-          │           │   │   └── lista-empleados.component.css 
-          │           │   │   └── lista-empleados.component.spec.ts 
-          │           │   ├── pages/      # Vistas completas
-          │           │   │   └── empleados.page.ts
-          │           │   ├── services/   # Servicios (API)
-          │           │   │   └── empleados.service.ts
-          │           │   ├── models/     # Interfaces y tipos
-          │           │   │   └── empleado.model.ts
-          │           │   └── tests/      # Pruebas unitarias
-          │           │       └── empleados.service.spec.ts
-          │           └── ...             # Otras funcionalidades
-      
+          Para cada componente:
+          - Crea el archivo `.ts` del componente que utilice el servicio relacionado.
+          - Crea su archivo `.spec.ts` con pruebas básicas de creación y llamadas a métodos del servicio.
+          
+          Formato obligatorio:
+          === archivo: [ruta/archivo.ts] ===
+          [código TypeScript]
+          === archivo: [ruta/archivo.spec.ts] ===
+          [código de pruebas]
+          
+          Estructura del proyecto:
+          src/
+          └── app/
+              └── features/
+                  └── empleados/
+                      ├── components/
+                      │   └── [componente].component.ts
+                      │   └── [componente].component.html
+                      │   └── [componente].component.css
+                      │   └── [componente].component.spec.ts
+                      ├── services/
+                      │   └── [servicio].service.ts
+                      │   └── [servicio].service.spec.ts
+                      ├── models/
+                      │   └── [modelo].model.ts (solo si explícitamente indicado)
+          
           Reglas:
           - No generes código para componentes clasificados como "REUTILIZABLE-AS-IS".
+          - No importes clases o archivos que no estén explícitamente indicados en el listado.
+          - Si necesitas una clase como `Empleado`, y no está listada, debes definirla tú mismo como parte del código generado.
           - Usa Angular standalone sin módulos.
           - Usa Jasmine + Karma.
-          - Devuelve solo el código fuente, sin comentarios ni explicaciones.
+          - Devuelve solo el código fuente. No expliques, no justifiques.
+          
           EOF
+          
 
-          echo -e "\n\n--- INSTRUCCIONES ADICIONALES ---" >> prompt_ts.txt
-          cat <<'EOF' >> prompt_ts.txt
-
-          Restricciones adicionales:
-
-          - Solo puedes importar clases, interfaces o modelos que estén explícitamente definidos en este diagnóstico.
-          - Si necesitas un modelo (por ejemplo, `Empleado`), primero verifica si está incluido en el diagnóstico. Si no lo está, debes definirlo tú mismo como parte del código generado.
-          - No asumas la existencia de archivos como `empleado.model.ts` si no está indicado explícitamente.
-
-          EOF
-
-      - name: Llamar a OpenAI para generar código TS
+       - name: Llamar a OpenAI para generar código TS
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
