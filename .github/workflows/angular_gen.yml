@@ -295,8 +295,7 @@ jobs:
           
           EOF
           
-
-       - name: Llamar a OpenAI para generar código TS
+      - name: Llamar a OpenAI para generar código TS
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
