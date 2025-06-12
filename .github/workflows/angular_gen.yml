@@ -299,9 +299,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d @payload_ts.json > respuesta_ts.json
 
-          echo "📋 Respuesta completa de OpenAI:"
-          cat ../respuesta_ts.json
-
+          echo "📥 Respuesta recibida."
 
           RESULTADO=$(jq -r '.choices[0].message.content // empty' respuesta_ts.json)
 
@@ -537,6 +535,8 @@ jobs:
                   -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
                   -H "Content-Type: application/json" \
                   -d @../payload_ts.json > ../respuesta_ts.json
+                  echo "📋 Respuesta completa de OpenAI:"
+                  cat ../respuesta_ts.json
               else
                 echo "⚠️ No se encontró el archivo de entrada de código TypeScript"
                 exit 1
