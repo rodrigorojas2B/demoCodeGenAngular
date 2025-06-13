@@ -311,16 +311,18 @@ jobs:
           done
       
           echo "📄 Construyendo payload_ts.json con entrada completa (sin riesgo de truncamiento)..."
-          jq -Rs --arg SYSTEM_MSG "Eres un generador experto de aplicaciones Angular. Devuelve únicamente código TypeScript válido, sin explicaciones." '
-          {
+
+          SYSTEM_MSG="Eres un generador experto de aplicaciones Angular. Devuelve únicamente código TypeScript válido, sin explicaciones."
+          USER_MSG=$(<prompt_ts.txt)
+
+          jq -n --arg system "$SYSTEM_MSG" --arg user "$USER_MSG" '{
             model: "gpt-4",
             messages: [
-              { "role": "system", "content": $SYSTEM_MSG },
-              { "role": "user", "content": . }
+              { "role": "system", "content": $system },
+              { "role": "user", "content": $user }
             ],
             temperature: 0.2
-          }
-          ' < prompt_ts.txt > payload_ts.json
+          }' > payload_ts.json
       
           echo "🔢 Tamaño de payload_ts.json:"
           wc -c payload_ts.json
