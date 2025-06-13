@@ -324,29 +324,19 @@ jobs:
             temperature: 0.2
           }' > payload_ts.json
       
-          SYSTEM_MSG="Eres un generador experto de aplicaciones Angular. Devuelve únicamente código TypeScript válido, sin explicaciones."
-          USER_MSG=$(cat prompt_ts.txt)
-
-          jq -n --arg system "$SYSTEM_MSG" --arg user "$USER_MSG" '{
-            model: "gpt-4",
-            messages: [
-              { "role": "system", "content": $system },
-              { "role": "user", "content": $user }
-            ],
-            temperature: 0.2
-          }' > payload_ts.json
 
           echo "🔢 Tamaño de payload_ts.json:"
           wc -c payload_ts.json
       
-          echo "📄 Validando contenido completo del payload (dividido por partes)..."
-          split -b 10000 payload_ts.json payload_part_
-      
-          for f in payload_part_*; do
-            echo "🧩 Contenido de $f"
+          echo "📄 Dump completo de payload_ts.json (en tramos de 500 líneas):"
+          split -l 500 payload_ts.json payload_line_
+
+          for f in payload_line_*; do
+            echo "🧩 Fragmento $f"
             cat "$f"
             echo "---------------------------------------------"
           done
+
       
           echo "📤 Payload construido, enviando a OpenAI..."
       
