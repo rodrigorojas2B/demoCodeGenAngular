@@ -313,7 +313,7 @@ jobs:
           echo "📄 Construyendo payload_ts.json con entrada completa (sin riesgo de truncamiento)..."
 
           SYSTEM_MSG="Eres un generador experto de aplicaciones Angular. Devuelve únicamente código TypeScript válido, sin explicaciones."
-          USER_MSG=$(< prompt_ts.txt)
+          USER_MSG=$(cat prompt_ts.txt)
 
           jq -n --arg system "$SYSTEM_MSG" --arg user "$USER_MSG" '{
             model: "gpt-4",
