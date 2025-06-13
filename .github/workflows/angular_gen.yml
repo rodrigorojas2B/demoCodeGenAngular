@@ -227,7 +227,7 @@ jobs:
       - name: Generar prompt para creación de código TypeScript (TS + pruebas unitarias)
         run: |
           cd repositorio-base
-
+      
           echo -e "\n--- HISTORIA DE USUARIO ---" >> prompt_ts.txt
           cat entrada_gpt.txt >> prompt_ts.txt
       
@@ -247,27 +247,31 @@ jobs:
               printf "\nComponente:\n- Archivo: %s\n- Tipo: %s\n- Clasificación: %s\n- Método: %s\n- Endpoint: %s\n- Motivo: %s\n", archivo, tipo, clasificacion, metodo, endpoint, motivo
             }
           ' diagnostico_componentes.txt >> prompt_ts.txt
-
       
           echo -e "\n--- INSTRUCCIONES ---" >> prompt_ts.txt
           cat <<'EOF' >> prompt_ts.txt
       
           Eres un generador de código Angular experto.
           
-          Para **cada entrada listada en la sección anterior**, debes generar exactamente los siguientes archivos:
+          Para **cada entrada listada en la sección anterior**, debes generar exactamente los siguientes archivos, incluso si el nombre del archivo se repite (por ejemplo, si hay múltiples métodos asociados al mismo `employee.service.ts`, cada uno debe aparecer de forma independiente en el resultado).
+          
+          Genera exactamente:
           
           - El archivo `.ts` con la lógica del componente o servicio.
           - El archivo `.spec.ts` con pruebas unitarias completas (verificación de creación, métodos, mocks y errores).
+          - Para componentes: también genera su `.html` y `.css` respectivos.
           
           ⚠️ Importante:
           - Usa el nombre de archivo exactamente como está listado.
+          - Cada entrada representa un archivo separado, incluso si el nombre del archivo coincide con otro.
+          - No agrupes funcionalidades múltiples en un solo archivo.
           - No omitas ninguna entrada.
           - No generes archivos adicionales que no estén definidos arriba.
           - Si necesitas importar una clase (como `Empleado`), y **no está explícitamente listada**, debes crearla tú mismo como parte de los archivos generados (`models/empleado.model.ts`).
           - No asumas la existencia de archivos externos.
-          - Usa Angular standalone (sin módulos).
-          - Usa Jasmine + Karma.
-          - Devuelve solo bloques de código con el siguiente formato:
+          - Usa Angular standalone (sin NgModules).
+          - Usa Jasmine + Karma para las pruebas.
+          - Devuelve solo bloques de código con el siguiente formato, sin explicaciones ni texto adicional:
           
           === archivo: [ruta/archivo.ts] ===
           [código aquí]
