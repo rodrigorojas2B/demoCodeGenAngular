@@ -310,11 +310,14 @@ jobs:
           }' prompt_ts.txt > payload_ts.json
 
           echo "📤 Payload construido, enviando a OpenAI..."
-          echo "📄 Payload completo (formateado):"
-          split -l 100 payload_ts.json payload_part_
-          for file in payload_part_*; do
-            echo "📄 Contenido de $file"
-            cat "$file"
+          echo "📦 Dividiendo e imprimiendo el payload completo para revisión..."
+
+          # Divide cada 200 líneas para evitar truncamiento en consola (ajustable)
+          split -l 200 payload_ts.json payload_part_
+
+          for f in payload_part_*; do
+            echo "🧩 Contenido de $f"
+            cat "$f"
             echo "---------------------------------------------"
           done
 
