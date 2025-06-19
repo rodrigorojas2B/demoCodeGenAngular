@@ -604,6 +604,11 @@ jobs:
               echo "📥 Respuesta recibida. Aplicando correcciones..."
               jq -r '.choices[0].message.content // empty' respuesta_build.json > codigo_ts_corregido.txt
       
+              echo "📄 Contenido recibido de OpenAI:"
+              cat codigo_ts_corregido.txt
+              echo "---------------------------------------------"
+
+
               if [ ! -s codigo_ts_corregido.txt ]; then
                 echo "⚠️ La respuesta de OpenAI está vacía o malformada"
                 exit 1

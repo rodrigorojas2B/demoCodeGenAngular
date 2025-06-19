@@ -14,7 +14,7 @@ criterios_aceptacion:
   - La modificación  debe estar delimitada por comentarios que indiquen claramente el inicio y fin del cambio realizado por la IA.
 
 id: HDU-EMP-002
-titulo: Empleados nacidos  antes del 2000
+titulo: Empleados nacidos antes del 2000
 actor: Administrador del sistema
 descripcion: 
   Como administrador del  sistema
