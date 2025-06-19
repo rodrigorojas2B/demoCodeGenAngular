@@ -30,7 +30,7 @@ titulo: Empleados ordenados  por posición
 actor: Administrador del sistema
 descripcion: 
   Como administrador del sistema
-  quiero obtener una lista de empleados agrupados por posición
+  quiero obtener una lista de  empleados agrupados por posición
   para poder segmentar a contar cuantos empledos hay en cada posición
 criterios_aceptacion:
   - Se debe crear un nuevo end-point  para esta consulta
