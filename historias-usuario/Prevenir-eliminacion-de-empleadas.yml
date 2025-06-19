@@ -19,7 +19,7 @@ actor: Administrador del sistema
 descripcion: 
   Como administrador del sistema
   quiero obtener una lista de empleados que hayan nacido antes del año 2000
-  para poder segmentar a los empleados  por generaciones y aplicar políticas diferenciadas
+  para poder segmentar a los  empleados  por generaciones y aplicar políticas diferenciadas
 criterios_aceptacion:
   - Se debe crear un nuevo end-point para esta consulta
   - Se deben mantener todos los métodos actuales sin eliminación ni reemplazo.
