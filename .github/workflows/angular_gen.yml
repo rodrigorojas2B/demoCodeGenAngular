@@ -542,94 +542,95 @@ jobs:
           echo "📁 Entrando al proyecto Angular"
           cd repositorio-base/${{ steps.detectar_app.outputs.appdir }}
       
+          echo "📦 Instalando dependencias..."
+          npm install
+      
+          # Verificar e instalar Angular CLI si no está disponible
+          if ! npx ng version > /dev/null 2>&1; then
+            echo "⚠️ Angular CLI no está instalado localmente. Instalando..."
+            npm install --save-dev @angular/cli
+          fi
+      
           max_attempts=3
           attempt=1
       
           while [ $attempt -le $max_attempts ]; do
             echo "🏗️ Intento $attempt: Compilando con 'ng build --configuration=production'..."
       
-            # Verificar que Angular CLI esté disponible
-            if ! npx ng version > /dev/null 2>&1; then
-              echo "❌ Angular CLI no está disponible. Verifica que esté instalado como dependencia."
-              exit 1
-            fi
-      
-            # Ejecutar compilación y capturar código de salida
-            if npx ng build --configuration=production 2>&1 | tee ../build-error.log; then
+            if npx ng build --configuration=production | tee ../build-error.log; then
               echo "✅ Compilación exitosa en intento $attempt"
               exit 0
             else
               echo "❌ Fallo de compilación en intento $attempt"
-            fi
       
-            if [ $attempt -eq $max_attempts ]; then
-              echo "🚫 No fue posible corregir la compilación en $max_attempts intentos"
-              exit 1
-            fi
-      
-            echo "🧠 Preparando payload para corrección de build con OpenAI..."
-            cd ..
-            test_log_path="build-error.log"
-            code_path="codigo_ts_generado.txt"
-            payload_path="payload_build.json"
-      
-            # Recortar logs si son demasiado grandes
-            LOG_LIMIT=20000
-            if [ $(wc -c < "$test_log_path") -gt $LOG_LIMIT ]; then
-              echo "✂️ Log demasiado largo. Recortando a $LOG_LIMIT bytes..."
-              head -c $LOG_LIMIT "$test_log_path" > tmp_build_error.log
-              mv tmp_build_error.log "$test_log_path"
-            fi
-      
-            jq -n \
-              --arg system_msg "Corrige exclusivamente el código entregado para que compile correctamente en Angular. No agregues archivos nuevos. No devuelvas explicaciones ni texto adicional. Responde solo con bloques de código del tipo:\n=== archivo: [ruta.ts] ===\n[código]\nNo incluyas encabezados, comentarios fuera del código, ni texto antes o después de los bloques." \
-              --rawfile errores "$test_log_path" \
-              --rawfile codigo "$code_path" \
-              '{
-                model: "gpt-4",
-                messages: [
-                  { "role": "system", "content": $system_msg },
-                  { "role": "user", "content": "Errores de compilación:\n\($errores)\n\nCódigo actual:\n\($codigo)" }
-                ],
-                temperature: 0
-              }' > "$payload_path"
-      
-            echo "📨 Enviando a OpenAI para corrección de compilación..."
-            curl -s https://api.openai.com/v1/chat/completions \
-              -H "Authorization: Bearer $OPENAI_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d @"$payload_path" > respuesta_build.json
-      
-            echo "📥 Respuesta recibida. Aplicando correcciones..."
-            jq -r '.choices[0].message.content // empty' respuesta_build.json > codigo_ts_corregido.txt
-      
-            if [ ! -s codigo_ts_corregido.txt ]; then
-              echo "⚠️ La respuesta de OpenAI está vacía o malformada"
-              exit 1
-            fi
-      
-            echo "📄 Separando archivos generados..."
-            csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_corregido.txt "/^=== archivo: /" {*}
-      
-            for file in ts_tmp_*.txt; do
-              ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
-              if [ -z "$ruta" ]; then
-                echo "⚠️ No se pudo determinar ruta para $file. Saltando."
-                continue
+              if [ $attempt -eq $max_attempts ]; then
+                echo "❌ No fue posible corregir la compilación en $max_attempts intentos"
+                exit 1
               fi
       
-              destino="repositorio-base/${{ steps.detectar_app.outputs.appdir }}/$ruta"
-              mkdir -p "$(dirname "$destino")"
-              tail -n +2 "$file" > "$destino"
-              rm "$file"
-            done
+              echo "🧠 Preparando payload para corrección de build con OpenAI..."
+              cd ..
+              test_log_path="build-error.log"
+              code_path="codigo_ts_generado.txt"
+              payload_path="payload_build.json"
       
-            echo "🔁 Reintentando compilación tras corrección..."
-            cd "repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
-            ((attempt++))
+              # Recortar logs si son demasiado grandes
+              LOG_LIMIT=20000
+              if [ $(wc -c < "$test_log_path") -gt $LOG_LIMIT ]; then
+                echo "✂️ Log demasiado largo. Recortando a $LOG_LIMIT bytes..."
+                head -c $LOG_LIMIT "$test_log_path" > tmp_build_error.log
+                mv tmp_build_error.log "$test_log_path"
+              fi
+      
+              jq -n \
+                --arg system_msg "Corrige exclusivamente el código entregado para que compile correctamente en Angular. No agregues archivos nuevos. No devuelvas explicaciones ni texto adicional. Responde solo con bloques de código del tipo:\n=== archivo: [ruta.ts] ===\n[código]\nNo incluyas encabezados, comentarios fuera del código, ni texto antes o después de los bloques." \
+                --rawfile errores "$test_log_path" \
+                --rawfile codigo "$code_path" \
+                '{
+                  model: "gpt-4",
+                  messages: [
+                    { "role": "system", "content": $system_msg },
+                    { "role": "user", "content": "Errores de compilación:\n\($errores)\n\nCódigo actual:\n\($codigo)" }
+                  ],
+                  temperature: 0
+                }' > "$payload_path"
+      
+              echo "📨 Enviando a OpenAI para corrección de compilación..."
+              curl -s https://api.openai.com/v1/chat/completions \
+                -H "Authorization: Bearer $OPENAI_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d @"$payload_path" > respuesta_build.json
+      
+              echo "📥 Respuesta recibida. Aplicando correcciones..."
+              jq -r '.choices[0].message.content // empty' respuesta_build.json > codigo_ts_corregido.txt
+      
+              if [ ! -s codigo_ts_corregido.txt ]; then
+                echo "⚠️ La respuesta de OpenAI está vacía o malformada"
+                exit 1
+              fi
+      
+              echo "📄 Separando archivos generados..."
+              csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_corregido.txt "/^=== archivo: /" {*}
+      
+              for file in ts_tmp_*.txt; do
+                ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
+                if [ -z "$ruta" ]; then
+                  echo "⚠️ No se pudo determinar ruta para $file. Saltando."
+                  continue
+                fi
+      
+                destino="repositorio-base/${{ steps.detectar_app.outputs.appdir }}/$ruta"
+                mkdir -p "$(dirname "$destino")"
+                tail -n +2 "$file" > "$destino"
+                rm "$file"
+              done
+      
+              echo "🔁 Reintentando compilación tras corrección..."
+              cd "repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
+              ((attempt++))
+            fi
           done
       
-
       - name: Ejecutar pruebas unitarias con corrección automática
         run: |
           echo "📁 Entrando al proyecto Angular"
