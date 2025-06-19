@@ -634,7 +634,8 @@ jobs:
       - name: Ejecutar pruebas unitarias con corrección automática
         run: |
           echo "📁 Entrando al proyecto Angular"
-          cd repositorio-base/${{ steps.detectar_app.outputs.appdir }}
+          APP_DIR="repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
+          cd "$APP_DIR"
       
           echo "📦 Instalando dependencias..."
           npm install
@@ -720,17 +721,17 @@ jobs:
                 continue
               fi
       
-              destino="repositorio-base/${{ steps.detectar_app.outputs.appdir }}/$ruta"
+              destino="$APP_DIR/$ruta"
               mkdir -p "$(dirname "$destino")"
               tail -n +2 "$file" > "$destino"
               rm "$file"
             done
       
-            cd "repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
             echo "🔁 Reintentando después de corrección..."
+            cd "$APP_DIR"
             ((attempt++))
           done
-                
+                      
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
