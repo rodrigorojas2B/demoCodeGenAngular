@@ -611,23 +611,34 @@ jobs:
       
               echo "📄 Separando archivos generados..."
               csplit --quiet --prefix=ts_tmp_ --suffix-format=%02d.txt codigo_ts_corregido.txt "/^=== archivo: /" {*}
-      
+        
               for file in ts_tmp_*.txt; do
                 ruta=$(grep '^=== archivo:' "$file" | sed -E 's/^=== archivo: //;s/ ===$//')
                 if [ -z "$ruta" ]; then
                   echo "⚠️ No se pudo determinar ruta para $file. Saltando."
+                  cat "$file"  # 👈 imprime contenido para debugging
                   continue
                 fi
-      
-                destino="repositorio-base/${{ steps.detectar_app.outputs.appdir }}/$ruta"
+        
+                destino="$APP_DIR/$ruta"
+                echo "📁 Escribiendo archivo corregido en: $destino"
                 mkdir -p "$(dirname "$destino")"
                 tail -n +2 "$file" > "$destino"
                 rm "$file"
               done
-      
-              echo "🔁 Reintentando compilación tras corrección..."
-              cd "repositorio-base/${{ steps.detectar_app.outputs.appdir }}"
+        
+              echo "📁 Verificando existencia del directorio antes de reentrar: $APP_DIR"
+              if [ ! -d "$APP_DIR" ]; then
+                echo "❌ ERROR: Directorio '$APP_DIR' no existe. Abortando."
+                ls -la repositorio-base
+                ls -la repositorio-base/${{ steps.detectar_app.outputs.appdir }}
+                exit 1
+              fi
+        
+              echo "🔁 Reintentando después de corrección..."
+              cd "$APP_DIR"
               ((attempt++))
+        
             fi
           done
       
