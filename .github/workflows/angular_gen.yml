@@ -662,8 +662,7 @@ jobs:
             echo "🧪 Ejecutando pruebas unitarias - Intento $attempt..."
             npx ng test --watch=false --browsers=ChromeHeadless | tee ../test-error.log
       
-            # Validar si hay errores en el log
-            if grep -q "TS[0-9]\{4\}" ../test-error.log || grep -q "Error:" ../test-error.log; then
+            if grep -q "TS[0-9]\\{4\\}" ../test-error.log || grep -q "Error:" ../test-error.log; then
               echo "❌ Se encontraron errores TypeScript o de ejecución en el log"
             else
               echo "✅ Tests pasaron en el intento $attempt"
@@ -712,6 +711,17 @@ jobs:
               exit 1
             fi
       
+            echo "📤 Payload generado (en bloques de 1000 líneas):"
+            LINE_LIMIT=1000
+            total_lines=$(wc -l < "$payload_path")
+            chunks=$(( (total_lines + LINE_LIMIT - 1) / LINE_LIMIT ))
+            for ((i = 0; i < chunks; i++)); do
+              start=$((i * LINE_LIMIT + 1))
+              end=$(( (i + 1) * LINE_LIMIT ))
+              echo -e "\n📄 Parte $((i+1)) ($start - $end):"
+              sed -n "${start},${end}p" "$payload_path"
+            done
+      
             echo "📨 Enviando solicitud a OpenAI..."
             curl -s https://api.openai.com/v1/chat/completions \
               -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
@@ -720,7 +730,7 @@ jobs:
       
             echo "📥 Respuesta recibida. Aplicando correcciones..."
             jq -r '.choices[0].message.content // empty' respuesta_ts.json > codigo_ts_corregido.txt
-
+      
             echo "📄 Contenido recibido de OpenAI:"
             cat codigo_ts_corregido.txt
             echo "---------------------------------------------"
@@ -750,7 +760,7 @@ jobs:
             cd "$APP_DIR"
             ((attempt++))
           done
-                      
+                              
       - name: Commit y push de los cambios generados
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
