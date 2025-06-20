@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-BkKowjReMUbVX2YSsUdqipUSlYRrE",
+  "object": "chat.completion",
+  "created": 1750382822,
+  "model": "gpt-4-0613",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "=== archivo: src/app/components/header/header.component.html ===\n```html\n<header class=\"header\">\n  <img src=\"https://2brains.cl/wp-content/uploads/2022/01/logo-2brains.svg\" alt=\"Logo\" class=\"logo\">\n  <nav class=\"nav\">\n    <a href=\"/\" class=\"nav-item\">Inicio</a>\n    <a href=\"/empleados\" class=\"nav-item\">Empleados</a>\n    <a href=\"#\" class=\"nav-item\" (click)=\"logout()\">Cerrar sesión</a>\n  </nav>\n</header>\n```\n\n=== archivo: src/app/components/header/header.component.css ===\n```css\n.header {\n  background-color: #0277BD;\n  display: flex;\n  justify-content: space-between;\n  padding: 20px;\n  color: #FFFFFF;\n}\n\n.logo {\n  width: 120px;\n  height: auto;\n}\n\n.nav {\n  display: flex;\n}\n\n.nav-item {\n  margin-left: 20px;\n  color: #FFFFFF;\n  text-decoration: none;\n}\n```\n\n=== archivo: src/app/components/employee-list/employee-list.component.html ===\n```html\n<div class=\"card\">\n  <h2 class=\"title\">Listado de Empleados</h2>\n  <form class=\"form\">\n    <label for=\"nombre\">Buscar por nombre</label>\n    <input type=\"text\" id=\"nombre\" placeholder=\"Ej: Juan Pérez\">\n    <button class=\"button-primary\" (click)=\"buscarEmpleados()\">Buscar</button>\n  </form>\n  <table class=\"table\">\n    <thead>\n      <tr>\n        <th>Nombre</th>\n        <th>Cargo</th>\n        <th>Email</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr *ngFor=\"let empleado of empleados\">\n        <td>{{empleado.nombre}}</td>\n        <td>{{empleado.cargo}}</td>\n        <td>{{empleado.email}}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n```\n\n=== archivo: src/app/components/employee-list/employee-list.component.css ===\n```css\n.card {\n  background-color: #F5F5F5;\n  padding: 20px;\n  border-radius: 8px;\n}\n\n.title {\n  font-size: 24px;\n  color: #212121;\n}\n\n.form {\n  margin-bottom: 20px;\n}\n\n.button-primary {\n  background-color: #009688;\n  color: #FFFFFF;\n  border-radius: 8px;\n  padding: 10px 20px;\n  border: none;\n  cursor: pointer;\n}\n\n.table {\n  width: 100%;\n  border-collapse: collapse;\n}\n\n.table th, .table td {\n  border: 1px solid #212121;\n  padding: 10px;\n  text-align: left;\n}\n```\n",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3059,
+    "completion_tokens": 612,
+    "total_tokens": 3671,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": null
+}

@@ -1,0 +1,6 @@
+El código TypeScript proporcionado parece estar bien escrito y no debería causar ningún error durante la ejecución de las pruebas unitarias. Sin embargo, el error que se muestra en la salida de la consola indica que hay un error de carga, lo que significa que uno de los archivos requeridos no se pudo cargar correctamente.
+
+Este error puede ser causado por varias razones, como un archivo que falta, un error de sintaxis en uno de los archivos, o un problema con la configuración de Karma. Sin embargo, sin más detalles sobre el error específico, es difícil determinar la causa exacta del problema.
+
+Dicho esto, hay un error en el código que podría estar causando problemas. En el archivo `employee.service.ts`, se está utilizando `switchMap` sin importarlo desde `rxjs/operators`. Aquí está la corrección:
+

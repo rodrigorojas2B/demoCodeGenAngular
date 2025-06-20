@@ -1,0 +1,11 @@
+📋 Resumen de archivos generados:
+
+=== COMPONENTES GENERADOS ===
+empleados/src/app/components/employee-list/employee-list.component.css
+empleados/src/app/components/employee-list/employee-list.component.html
+empleados/src/app/components/header/header.component.css
+empleados/src/app/components/header/header.component.html
+
+=== SERVICIOS GENERADOS ===
+
+=== MODELOS GENERADOS ===

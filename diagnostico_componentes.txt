@@ -1,0 +1,8 @@
+| Archivo Angular | Tipo | Clasificación | API a usar | Método | Endpoint | Motivo |
+|------------------|------|----------------|------------|--------|----------|--------|
+| employee.service.ts | Servicio | Servicio | HDU-EMP-001 | DELETE | /api/employees/{id} | Para implementar la lógica de prevención de eliminación de empleados femeninos. |
+| employee.component.ts | Componente | Componente | HDU-EMP-001 | DELETE | /api/employees/{id} | Para manejar la interacción del usuario y mostrar los mensajes de error apropiados cuando se intenta eliminar un empleado femenino. |
+| bornBefore2000.service.ts | Servicio | Servicio | HDU-EMP-002 | GET | /api/employees/born-before-2000 | Para obtener la lista de empleados que nacieron antes del año 2000. |
+| bornBefore2000.component.ts | Componente | Componente | HDU-EMP-002 | GET | /api/employees/born-before-2000 | Para mostrar la lista de empleados que nacieron antes del año 2000. |
+| orderByPosition.service.ts | Servicio | Servicio | HDU-EMP-003 | GET | /api/employees/order-by-position | Para obtener la lista de empleados ordenados por posición. |
+| orderByPosition.component.ts | Componente | Componente | HDU-EMP-003 | GET | /api/employees/order-by-position | Para mostrar la lista de empleados ordenados por posición. |

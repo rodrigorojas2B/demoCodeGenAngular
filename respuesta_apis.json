@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-BkKnmJ9tv0sOuDC1R2C3KSmTnOTTb",
+  "object": "chat.completion",
+  "created": 1750382750,
+  "model": "gpt-4-0613",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "| Historia | Método | Endpoint | Parámetros | Cobertura | Observación |\n|----------|--------|----------|------------|-----------|-------------|\n| HDU-EMP-001 | DELETE | /api/employees/{id} | id | Parcial | El endpoint permite eliminar un empleado, pero no hay una validación específica para prevenir la eliminación de empleados femeninos. |\n| HDU-EMP-002 | GET | /api/employees/born-before-2000 | Ninguno | Sí | El endpoint parece diseñado para cumplir con esta historia de usuario. Sin embargo, la implementación real debe asegurarse de que los datos de nacimiento se manejan correctamente. |\n| HDU-EMP-003 | GET | /api/employees/order-by-position | Ninguno | Sí | El endpoint parece diseñado para cumplir con esta historia de usuario. Sin embargo, la implementación real debe asegurarse de que los datos de posición se manejan correctamente. |",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1070,
+    "completion_tokens": 209,
+    "total_tokens": 1279,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": null
+}

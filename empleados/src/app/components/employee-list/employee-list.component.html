@@ -1,0 +1,25 @@
+<div class="card">
+  <h2 class="title">Listado de Empleados</h2>
+  <form class="form">
+    <label for="nombre">Buscar por nombre</label>
+    <input type="text" id="nombre" placeholder="Ej: Juan Pérez">
+    <button class="button-primary" (click)="buscarEmpleados()">Buscar</button>
+  </form>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Cargo</th>
+        <th>Email</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let empleado of empleados">
+        <td>{{empleado.nombre}}</td>
+        <td>{{empleado.cargo}}</td>
+        <td>{{empleado.email}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+

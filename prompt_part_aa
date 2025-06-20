@@ -1,0 +1,149 @@
+
+--- HISTORIA DE USUARIO ---
+id: HDU-EMP-001
+titulo: Prevenir eliminación de empleadas
+actor: Administrador del sistema
+descripcion: 
+  Como administrador del sistema,
+  quiero que no se permita eliminar empleados de género femenino,
+  para cumplir con la normativa interna de no eliminar registros históricos sensibles.
+criterios_aceptacion:
+  - Si se intenta eliminar un empleado con género "Femenino", se debe lanzar una excepción o retornar un error controlado.
+  - Si el empleado es de género "Masculino" u otro valor, se permite la eliminación normal.
+  - El método de eliminación actual debe ser modificado para incluir esta validación.
+  - No debe eliminarse ninguna lógica existente que ya esté implementada en ese método.
+  - Se deben mantener todos los métodos actuales sin eliminación ni reemplazo.
+  - La modificación debe estar delimitada por comentarios que indiquen claramente el inicio y fin del cambio realizado por la IA.
+
+id: HDU-EMP-002
+titulo: Empleados nacidos antes del 2000
+actor: Administrador del sistema
+descripcion: 
+  Como administrador del  sistema
+  quiero obtener una lista de empleados que hayan nacido antes del año 2000
+  para poder segmentar a los empleados  por generaciones y aplicar políticas diferenciadas
+criterios_aceptacion:
+  - Se debe crear un nuevo end-point para esta consulta
+  - Se deben mantener todos los métodos actuales sin eliminación ni reemplazo.
+  - La modificación debe estar delimitada por comentarios que indiquen claramente el inicio y fin del cambio realizado por la IA.
+
+id: HDU-EMP-003
+titulo: Empleados ordenados  por posición
+actor: Administrador del sistema
+descripcion: 
+  Como administrador del sistema
+  quiero obtener una lista de empleados agrupados por posición
+  para poder segmentar a contar cuantos empledos hay en cada posición
+criterios_aceptacion:
+  - Se debe crear un nuevo end-point  para esta consulta
+  - Se deben mantener todos los métodos actuales sin eliminación ni reemplazo.
+  - La modificación debe estar delimitada por comentarios que indiquen claramente el inicio y fin del cambio realizado por la IA.
+--- ANÁLISIS DE APIs DISPONIBLES ---
+| Historia | Método | Endpoint | Parámetros | Cobertura | Observación |
+|----------|--------|----------|------------|-----------|-------------|
+| HDU-EMP-001 | DELETE | /api/employees/{id} | id | Parcial | El endpoint permite eliminar un empleado, pero no hay una validación específica para prevenir la eliminación de empleados femeninos. |
+| HDU-EMP-002 | GET | /api/employees/born-before-2000 | Ninguno | Sí | El endpoint parece diseñado para cumplir con esta historia de usuario. Sin embargo, la implementación real debe asegurarse de que los datos de nacimiento se manejan correctamente. |
+| HDU-EMP-003 | GET | /api/employees/order-by-position | Ninguno | Sí | El endpoint parece diseñado para cumplir con esta historia de usuario. Sin embargo, la implementación real debe asegurarse de que los datos de posición se manejan correctamente. |
+
+--- COMPONENTES Y SERVICIOS A GENERAR (extraídos del diagnóstico) ---
+
+Componente:
+- Archivo: 
+- Tipo: ------------------
+- Clasificación: ------
+- Método: ------------
+- Endpoint: --------
+- Motivo: ----------
+
+Componente:
+- Archivo: 
+- Tipo:  employee.service.ts 
+- Clasificación:  Servicio 
+- Método:  HDU-EMP-001 
+- Endpoint:  DELETE 
+- Motivo:  /api/employees/{id} 
+
+Componente:
+- Archivo: 
+- Tipo:  employee.component.ts 
+- Clasificación:  Componente 
+- Método:  HDU-EMP-001 
+- Endpoint:  DELETE 
+- Motivo:  /api/employees/{id} 
+
+Componente:
+- Archivo: 
+- Tipo:  bornbefore2000.service.ts 
+- Clasificación:  Servicio 
+- Método:  HDU-EMP-002 
+- Endpoint:  GET 
+- Motivo:  /api/employees/born-before-2000 
+
+Componente:
+- Archivo: 
+- Tipo:  bornbefore2000.component.ts 
+- Clasificación:  Componente 
+- Método:  HDU-EMP-002 
+- Endpoint:  GET 
+- Motivo:  /api/employees/born-before-2000 
+
+Componente:
+- Archivo: 
+- Tipo:  orderbyposition.service.ts 
+- Clasificación:  Servicio 
+- Método:  HDU-EMP-003 
+- Endpoint:  GET 
+- Motivo:  /api/employees/order-by-position 
+
+Componente:
+- Archivo: 
+- Tipo:  orderbyposition.component.ts 
+- Clasificación:  Componente 
+- Método:  HDU-EMP-003 
+- Endpoint:  GET 
+- Motivo:  /api/employees/order-by-position 
+
+--- INSTRUCCIONES ---
+
+Eres un generador de código Angular experto.
+
+Para **cada entrada listada en la sección anterior**, debes generar exactamente los siguientes archivos, incluso si el nombre del archivo se repite (por ejemplo, si hay múltiples métodos asociados al mismo `employee.service.ts`, cada uno debe aparecer de forma independiente en el resultado).
+
+Genera exactamente:
+
+- El archivo `.ts` con la lógica del componente o servicio.
+- El archivo `.spec.ts` con pruebas unitarias completas (verificación de creación, métodos, mocks y errores).
+- Para componentes: también genera su `.html` y `.css` respectivos.
+
+⚠️ Importante:
+- Usa el nombre de archivo exactamente como está listado.
+- Cada entrada representa un archivo separado, incluso si el nombre del archivo coincide con otro.
+- No agrupes funcionalidades múltiples en un solo archivo.
+- No omitas ninguna entrada.
+- No generes archivos adicionales que no estén definidos arriba.
+- Si necesitas importar una clase (como `Empleado`), y **no está explícitamente listada**, debes crearla tú mismo como parte de los archivos generados (`models/empleado.model.ts`).
+- No asumas la existencia de archivos externos.
+- Usa Angular standalone (sin NgModules).
+- Usa Jasmine + Karma para las pruebas.
+- Devuelve solo bloques de código con el siguiente formato, sin explicaciones ni texto adicional:
+
+=== archivo: [ruta/archivo.ts] ===
+[código aquí]
+=== archivo: [ruta/archivo.spec.ts] ===
+[código aquí]
+
+Estructura esperada del proyecto:
+src/
+└── app/
+    └── features/
+        └── empleados/
+            ├── components/
+            │   └── [nombre].component.ts
+            │   └── [nombre].component.html
+            │   └── [nombre].component.css
+            │   └── [nombre].component.spec.ts
+            ├── services/
+            │   └── [nombre].service.ts
+            │   └── [nombre].service.spec.ts
+            ├── models/
+            │   └── [modelo].model.ts (solo si se requiere)

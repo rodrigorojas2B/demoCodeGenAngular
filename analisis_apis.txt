@@ -1,0 +1,5 @@
+| Historia | Método | Endpoint | Parámetros | Cobertura | Observación |
+|----------|--------|----------|------------|-----------|-------------|
+| HDU-EMP-001 | DELETE | /api/employees/{id} | id | Parcial | El endpoint permite eliminar un empleado, pero no hay una validación específica para prevenir la eliminación de empleados femeninos. |
+| HDU-EMP-002 | GET | /api/employees/born-before-2000 | Ninguno | Sí | El endpoint parece diseñado para cumplir con esta historia de usuario. Sin embargo, la implementación real debe asegurarse de que los datos de nacimiento se manejan correctamente. |
+| HDU-EMP-003 | GET | /api/employees/order-by-position | Ninguno | Sí | El endpoint parece diseñado para cumplir con esta historia de usuario. Sin embargo, la implementación real debe asegurarse de que los datos de posición se manejan correctamente. |
